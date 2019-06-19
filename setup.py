@@ -23,6 +23,7 @@ pip install -e '.[dev]'
 NOTE: To run on hardware, you will also need the DynamixelSDK.
 >$ git clone https://github.com/ROBOTIS-GIT/DynamixelSDK.git
 >$ export PYTHONPATH=/path/to/DynamixelSDK/python/src:$PYTHONPATH
+
 """
 
 import sys
@@ -53,7 +54,7 @@ setuptools.setup(
         'gym',
         'mujoco-py<2.1,>=2.0',
         'numpy',
-        'pyserial'
+        'pyserial',
         'transforms3d',
     ],
     extra_requires={
