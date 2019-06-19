@@ -1,0 +1,3 @@
+[submodule "dsuite_scenes"]
+	path = dsuite_scenes
+	url = https://partner-code.googlesource.com/adept-release/dsuite-scenes
