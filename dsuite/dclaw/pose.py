@@ -28,7 +28,7 @@ from dsuite.dclaw.base_env import BaseDClawEnv
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 
-DCLAW3_ASSET_PATH = 'dsuite_scenes/dclaw/dclaw3xh.xml'
+DCLAW3_ASSET_PATH = 'dsuite-scenes/dclaw/dclaw3xh.xml'
 
 
 class BaseDClawPose(BaseDClawEnv, metaclass=abc.ABCMeta):

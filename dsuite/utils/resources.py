@@ -35,6 +35,6 @@ def get_asset_path(path: str):
     """
     if path.startswith('dsuite'):
         return os.path.join(_MODULE_DIR, path)
-    elif path.startswith('dsuite_scenes'):
+    elif path.startswith('dsuite-scenes'):
         return os.path.join(_MODULE_DIR, path)
     raise ValueError('Unknown path root: ' + path)
