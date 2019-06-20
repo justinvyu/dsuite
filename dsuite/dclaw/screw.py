@@ -43,7 +43,7 @@ class BaseDClawScrew(BaseDClawTurn):
 
 @configurable(pickleable=True)
 class DClawScrewFixed(BaseDClawScrew):
-    """Rotates the object with a fixed initial position and velocity."""
+    """Rotates the object with a fixed initial position and fixed target velocity."""
 
     def _reset(self):
         # Start from the target and rotate at a constant velocity.
@@ -55,7 +55,7 @@ class DClawScrewFixed(BaseDClawScrew):
 
 @configurable(pickleable=True)
 class DClawScrewRandom(BaseDClawScrew):
-    """Rotates the object with a random initial position and velocity."""
+    """Rotates the object with a random initial position and target velocity."""
 
     def _reset(self):
         # Initial position is +/- 180 degrees.
@@ -70,7 +70,7 @@ class DClawScrewRandom(BaseDClawScrew):
 
 @configurable(pickleable=True)
 class DClawScrewRandomDynamics(DClawScrewRandom):
-    """Rotates the object with a random initial position and velocity.
+    """Rotates the object with a random initial position and target velocity.
 
     The dynamics of the simulation are randomized each episode.
     """

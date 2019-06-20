@@ -32,10 +32,10 @@ from dsuite.utils.resources import get_asset_path
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (
     'claw_qpos',
-    'object_x',
-    'object_y',
+    'object_angle_cos',
+    'object_angle_sin',
     'last_action',
-    'target_error',
+    'object_to_target_angle_dist',
 )
 
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_v0.xml'
@@ -103,17 +103,20 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         claw_state, object_state = self.robot.get_state(['dclaw', 'object'])
 
         # Calculate the signed angle difference to the target in [-pi, pi].
-        target_error = self._target_object_pos - object_state.qpos
-        target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
+        object_angle = object_state.qpos
+        object_to_target_angle_dist = np.abs(
+            self._target_object_pos - object_angle)
+        # target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
 
         return collections.OrderedDict((
             ('claw_qpos', claw_state.qpos),
             ('claw_qvel', claw_state.qvel),
-            ('object_x', np.cos(object_state.qpos)),
-            ('object_y', np.sin(object_state.qpos)),
-            ('object_qvel', object_state.qvel),
+            ('object_angle_cos', np.cos(object_state.qpos)),
+            ('object_angle_sin', np.sin(object_state.qpos)),
+            ('object_rotational_vel', object_state.qvel),
             ('last_action', self._last_action),
-            ('target_error', target_error),
+            # ('target_error', target_error),
+            ('object_to_target_angle_dist', object_to_target_angle_dist),
         ))
 
     def get_reward_dict(
@@ -122,12 +125,12 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             obs_dict: Dict[str, np.ndarray],
     ) -> Dict[str, np.ndarray]:
         """Returns the reward for the given action and observation."""
-        target_dist = np.abs(obs_dict['target_error'])
+        object_to_target_angle_dist = obs_dict['object_to_target_angle_dist']
         claw_vel = obs_dict['claw_qvel']
 
         reward_dict = collections.OrderedDict((
             # Penalty for distance away from goal.
-            ('target_dist_cost', -5 * target_dist),
+            ('object_to_target_angle_dist_cost', -5 * object_to_target_angle_dist),
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
              -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)
@@ -136,8 +139,8 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             ('joint_vel_cost', -1 * np.linalg.norm(claw_vel[claw_vel >= 0.5])),
 
             # Reward for close proximity with goal.
-            ('bonus_small', 10 * (target_dist < 0.25)),
-            ('bonus_big', 50 * (target_dist < 0.10)),
+            ('bonus_small', 10 * (object_to_target_angle_dist < 0.25)),
+            ('bonus_big', 50 * (object_to_target_angle_dist < 0.10)),
         ))
         return reward_dict
 
@@ -147,8 +150,10 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             reward_dict: Dict[str, np.ndarray],
     ) -> Dict[str, np.ndarray]:
         """Returns a standardized measure of success for the environment."""
+
         return collections.OrderedDict((
-            ('points', 1.0 - np.abs(obs_dict['target_error']) / np.pi),
+            ('points', 1.0 - np.minimum(
+                obs_dict['object_to_target_angle_dist'], np.pi) / np.pi),
             ('success', reward_dict['bonus_big'] > 0.0),
         ))
 
