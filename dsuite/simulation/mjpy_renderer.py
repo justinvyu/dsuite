@@ -62,10 +62,9 @@ class MjPyRenderer(Renderer):
             A numpy array of the pixels.
         """
         assert width > 0 and height > 0
-
         if not self._offscreen_renderer:
             self._offscreen_renderer = mujoco_py \
-                .MjRenderContextOffscreen(self._sim)
+                .MjRenderContextOffscreen(self._sim, device_id=-1)
 
         # Update the camera configuration for the free-camera.
         if camera_id == -1:
