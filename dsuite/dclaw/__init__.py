@@ -42,18 +42,19 @@ _TURN_EPISODE_LEN = 40  # 40*40*2.5ms = 4s
 
 register(
     env_id='DClawTurnFixed-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnFixed',
-    max_episode_steps=_TURN_EPISODE_LEN)
+    class_path='dsuite.dclaw.turn:DClawTurnFixed')
 
 register(
     env_id='DClawTurnRandom-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnRandom',
-    max_episode_steps=_TURN_EPISODE_LEN)
+    class_path='dsuite.dclaw.turn:DClawTurnRandom')
 
 register(
     env_id='DClawTurnRandomDynamics-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnRandomDynamics',
-    max_episode_steps=_TURN_EPISODE_LEN)
+    class_path='dsuite.dclaw.turn:DClawTurnRandomDynamics')
+
+register(
+    env_id='DClawTurnFixedFreeValve3-v0',
+    class_path='dsuite.dclaw.turn:DClawTurnFixedFreeValve3')
 
 
 #===============================================================================
