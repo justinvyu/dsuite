@@ -203,12 +203,3 @@ class DClawTurnRandomDynamics(DClawTurnRandom):
         self._randomize_claw_sim()
         self._randomize_object_sim()
         super()._reset()
-
-
-@configurable(pickleable=True)
-class DClawTurnFixedFreeValve3(DClawTurnFixed):
-    """Turns the object with a fixed initial and fixed target position."""
-    def __init__(self, **kwargs):
-        super().__init__(
-            asset_path='dsuite/dclaw/assets/dclaw3xh_valve3_free.xml',
-            **kwargs)

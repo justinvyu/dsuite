@@ -23,6 +23,7 @@ import numpy as np
 from dsuite.controllers.robot import DynamixelRobotController, RobotState
 from dsuite.dclaw.config import (
     DCLAW_SIM_CONFIG, DCLAW_HARDWARE_CONFIG, DCLAW_OBJECT_SIM_CONFIG,
+    DCLAW_FREE_OBJECT_SIM_CONFIG,
     DCLAW_OBJECT_HARDWARE_CONFIG, DCLAW_OBJECT_GUIDE_HARDWARE_CONFIG)
 from dsuite.robot_env import make_box_space, RobotEnv
 
@@ -66,7 +67,10 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
 
     @classmethod
     def get_config_for_device(
-            cls, device_path: Optional[str] = None) -> Dict[str, Any]:
+            cls,
+            device_path: Optional[str] = None,
+            free: bool = False
+    ) -> Dict[str, Any]:
         """Returns the configuration for the given device path."""
         if device_path is not None:
             if 'dlantern' in device_path:
@@ -75,7 +79,10 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
                 config = DCLAW_OBJECT_HARDWARE_CONFIG.copy()
             config['device_path'] = device_path
         else:
-            config = DCLAW_OBJECT_SIM_CONFIG
+            if free:
+                config = DCLAW_FREE_OBJECT_SIM_CONFIG
+            else:
+                config = DCLAW_OBJECT_SIM_CONFIG
         return config
 
     def __init__(self, **kwargs):

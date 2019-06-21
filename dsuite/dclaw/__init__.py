@@ -52,9 +52,13 @@ register(
     env_id='DClawTurnRandomDynamics-v0',
     class_path='dsuite.dclaw.turn:DClawTurnRandomDynamics')
 
+#===============================================================================
+# Turn Free Object tasks
+#===============================================================================
+
 register(
-    env_id='DClawTurnFixedFreeValve3-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnFixedFreeValve3')
+    env_id='DClawTurnFreeValve3Fixed-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3Fixed')
 
 
 #===============================================================================

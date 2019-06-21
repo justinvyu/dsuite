@@ -47,6 +47,26 @@ _OBJECT_SIM_CONFIG = {
     }
 }
 
+# Base partial configuration for the object in simulation.
+_FREE_OBJECT_SIM_CONFIG = {
+    'groups': {
+        'object': {
+            # 'qpos_indices': [-1],  # The object is the last qpos.
+            # 'qpos_range': [(-np.pi, np.pi)],
+            'qpos_indices': range(-6, 0),  # The object is the last qpos.
+            'qpos_range': [
+                (-0.25, 0.25),     # restrict x
+                (-0.25, 0.25),     # restrict y
+                (0, 0.1),          # unrestricted z
+                (-np.pi, np.pi), # unrestricted object orientation
+                (-np.pi, np.pi),
+                (-np.pi, np.pi)],
+            'sim_observation_noise': 0,
+        },
+        'guide': {},  # The guide group is a no-op in simulation.
+    }
+}
+
 # Base configuration for a DClaw robot in hardware.
 DCLAW_HARDWARE_CONFIG = merge_configs(
     DCLAW_SIM_CONFIG,
@@ -78,6 +98,9 @@ _OBJECT_HARDWARE_CONFIG = merge_configs(
 
 # Configuration for a DClaw with an object in simulation.
 DCLAW_OBJECT_SIM_CONFIG = merge_configs(DCLAW_SIM_CONFIG, _OBJECT_SIM_CONFIG)
+
+# Configuration for a DClaw with a free object in simulation.
+DCLAW_FREE_OBJECT_SIM_CONFIG = merge_configs(DCLAW_SIM_CONFIG, _FREE_OBJECT_SIM_CONFIG)
 
 # Configuration for a DClaw with an object in hardware.
 DCLAW_OBJECT_HARDWARE_CONFIG = merge_configs(
