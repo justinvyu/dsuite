@@ -28,6 +28,7 @@ from dsuite.dclaw.base_env import (BaseDClawObjectEnv,
                                    DEFAULT_CLAW_RESET_POSE)
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
+from dsuite.utils.circle_math import circle_distance
 
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (

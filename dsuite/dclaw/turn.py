@@ -25,9 +25,10 @@ import numpy as np
 from transforms3d.euler import euler2quat
 
 from dsuite.dclaw.base_env import (BaseDClawObjectEnv,
-                                       DEFAULT_CLAW_RESET_POSE)
+                                   DEFAULT_CLAW_RESET_POSE)
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
+from dsuite.utils.circle_math import circle_distance
 
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (
@@ -104,8 +105,8 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         # Calculate the signed angle difference to the target in [-pi, pi].
         object_angle = object_state.qpos
-        object_to_target_angle_dist = np.abs(
-            self._target_object_pos - object_angle)
+        object_to_target_angle_dist = circle_distance(
+            self._target_object_pos, object_angle)
         # target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
 
         return collections.OrderedDict((
