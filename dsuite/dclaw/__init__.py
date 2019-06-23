@@ -60,6 +60,10 @@ register(
     env_id='DClawTurnFreeValve3Fixed-v0',
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3Fixed')
 
+register(
+    env_id='DClawTurnFreeValve3ResetFree-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3ResetFree')
+
 
 #===============================================================================
 # Screw tasks

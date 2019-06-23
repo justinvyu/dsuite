@@ -45,14 +45,6 @@ DEFAULT_OBSERVATION_KEYS = (
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_free.xml'
 
 
-def circle_distance(euler1, euler2):
-    euler1 = np.mod(euler1, 2*np.pi)
-    euler2 = np.mod(euler2, 2*np.pi)
-    abs_diff = np.abs(euler1 - euler2)
-    return np.minimum(abs_diff,
-                      2*np.pi-abs_diff)
-
-
 class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     """Shared logic for DClaw turn tasks."""
 
@@ -217,6 +209,57 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
         super()._reset()
 
 
+@configurable(pickleable=True)
+class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
+    """Turns the object reset-free with a fixed initial and varied target positions."""
+
+    def __init__(self,
+                 swap_goal_upon_completion: bool = True,
+                 reset_fingers=True,
+                 **kwargs):
+        self._last_claw_qpos = DEFAULT_CLAW_RESET_POSE
+        self._last_object_position = np.array([0, 0, 0])
+        self._last_object_orientation = np.array([0, 0, 0])
+        self._reset_fingers = reset_fingers
+
+        super().__init__(**kwargs)
+        self._swap_goal_upon_completion = swap_goal_upon_completion
+        self._goals = [np.pi, 0]
+        self._goal_index = 1
+
+    def get_obs_dict(self) -> Dict[str, np.ndarray]:
+        """Returns the current observation of the environment.
+
+        Returns:
+            A dictionary of observation values. This should be an ordered
+            dictionary if `observation_keys` isn't set.
+        """
+
+        obs_dict = super().get_obs_dict()
+        self._last_claw_qpos = obs_dict['claw_qpos']
+        self._last_object_position = obs_dict['object_position']
+        self._last_object_orientation = obs_dict['object_orientation']
+        return obs_dict
+
+    def _get_goal_qpos(self, obs_dict):
+        if self._swap_goal_upon_completion and \
+           obs_dict['object_to_target_circle_distance'][2] < 0.10:
+            self._goal_index = np.mod(self._goal_index + 1, 2)
+        else:
+            goal = np.pi
+
+        goal = self._goals[self._goal_index]
+        return (0, 0, 0, 0, 0, goal)
+
+    def reset(self):
+        obs_dict = self.get_obs_dict()
+        if self._reset_fingers:
+            for _ in range(15):
+                self._step(DEFAULT_CLAW_RESET_POSE)
+            self._set_target_object_qpos(self._get_goal_qpos(obs_dict))
+        else:
+            self._set_target_object_qpos(self._get_goal_qpos(obs_dict))
+        return self._get_obs(self.get_obs_dict())
 # @configurable(pickleable=True)
 # class DClawTurnFreeObjectRandom(BaseDClawTurnFreeObject):
 #     """Turns the object with a random initial and random target position."""
