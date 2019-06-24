@@ -52,6 +52,10 @@ register(
     env_id='DClawTurnRandomDynamics-v0',
     class_path='dsuite.dclaw.turn:DClawTurnRandomDynamics')
 
+register(
+    env_id='DClawTurnImage-v0',
+    class_path='dsuite.dclaw.turn:DClawTurnImage')
+
 #===============================================================================
 # Turn Free Object tasks
 #===============================================================================
@@ -64,6 +68,9 @@ register(
     env_id='DClawTurnFreeValve3ResetFree-v0',
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3ResetFree')
 
+register(
+    env_id='DClawTurnFreeValve3Image-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3Image')
 
 #===============================================================================
 # Screw tasks

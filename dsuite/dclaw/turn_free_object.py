@@ -260,6 +260,55 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
         else:
             self._set_target_object_qpos(self._get_goal_qpos(obs_dict))
         return self._get_obs(self.get_obs_dict())
+
+@configurable(pickleable=True)
+class DClawTurnFreeValve3Image(BaseDClawTurnFreeObject):
+    """
+    Observation including the image.
+    """
+
+    def __init__(self, 
+                image_shape: np.ndarray, 
+                init_angle_range=(0., 0.),
+                target_angle_range=(np.pi, np.pi),
+                init_x_pos_range=(0., 0.),
+                init_y_pos_range=(0., 0.),
+                *args, **kwargs):
+        self._image_shape = image_shape
+        self._init_angle_range = init_angle_range
+        self._target_angle_range = target_angle_range
+        self._init_x_pos_range = init_x_pos_range
+        self._init_y_pos_range = init_y_pos_range
+        super(DClawTurnFreeValve3Image, self).__init__(*args, **kwargs)
+
+    def get_obs_dict(self) -> Dict[str, np.ndarray]:
+        width, height = self._image_shape[:2]
+        obs = super(DClawTurnFreeValve3Image, self).get_obs_dict()
+        image = self.render(mode='rgb_array', \
+                            width=width, 
+                            height=height,
+                            camera_id=1).reshape(-1)
+        obs['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
+        return obs
+
+    def _reset(self):
+        lows, highs = list(zip(self._init_angle_range, 
+                               self._target_angle_range, 
+                               self._init_x_pos_range,
+                               self._init_y_pos_range))
+        init_angle, target_angle, x_pos, y_pos = np.random.uniform(
+            low=lows, high=highs
+        )
+        # init_angle = np.random.uniform(
+        #         low=self._init_angle_range[0], high=self._init_angle_range[1])
+        # target_angle = np.random.uniform(
+        #     low=self._target_angle_range[0], high=self._target_angle_range[1])
+
+        self._initial_object_qpos = (x_pos, y_pos, 0, 0, 0, init_angle)
+        self._set_target_object_qpos((0, 0, 0, 0, 0, target_angle))
+        print(init_angle, target_angle)
+        super()._reset()
+
 # @configurable(pickleable=True)
 # class DClawTurnFreeObjectRandom(BaseDClawTurnFreeObject):
 #     """Turns the object with a random initial and random target position."""

@@ -204,3 +204,35 @@ class DClawTurnRandomDynamics(DClawTurnRandom):
         self._randomize_claw_sim()
         self._randomize_object_sim()
         super()._reset()
+
+@configurable(pickleable=True)
+class DClawImageTurn(BaseDClawTurn):
+    """
+    Observation including the image.
+    """
+
+    def __init__(self, image_shape: np.ndarray, 
+            init_angle_range,
+            target_angle_range,
+            *args, **kwargs):
+        self.image_shape = image_shape
+        self.init_angle_range = init_angle_range
+        self.target_angle_range = target_angle_range
+        super(DClawImageTurn, self).__init__(*args, **kwargs)
+
+    def get_obs_dict(self) -> Dict[str, np.ndarray]:
+        width, height = self.image_shape[:2]
+        obs = super(DClawImageTurn, self).get_obs_dict()
+        image = self.render(mode='rgb_array', \
+                            width=width, 
+                            height=height).reshape(-1)
+        obs['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
+        return obs
+
+    def _reset(self):
+        self._initial_object_pos = np.random.uniform(
+                low=self.init_angle_range[0], high=self.init_angle_range[1])
+        self._set_target_object_pos(
+                np.random.uniform(low=self.target_angle_range[0], 
+                    high=self.target_angle_range[1]))
+        super()._reset()
