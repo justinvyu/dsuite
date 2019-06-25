@@ -267,8 +267,8 @@ class DClawTurnFreeValve3Image(BaseDClawTurnFreeObject):
     Observation including the image.
     """
 
-    def __init__(self, 
-                image_shape: np.ndarray, 
+    def __init__(self,
+                image_shape: np.ndarray,
                 init_angle_range=(0., 0.),
                 target_angle_range=(np.pi, np.pi),
                 init_x_pos_range=(0., 0.),
@@ -285,15 +285,15 @@ class DClawTurnFreeValve3Image(BaseDClawTurnFreeObject):
         width, height = self._image_shape[:2]
         obs = super(DClawTurnFreeValve3Image, self).get_obs_dict()
         image = self.render(mode='rgb_array', \
-                            width=width, 
+                            width=width,
                             height=height,
                             camera_id=1).reshape(-1)
         obs['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
         return obs
 
     def _reset(self):
-        lows, highs = list(zip(self._init_angle_range, 
-                               self._target_angle_range, 
+        lows, highs = list(zip(self._init_angle_range,
+                               self._target_angle_range,
                                self._init_x_pos_range,
                                self._init_y_pos_range))
         init_angle, target_angle, x_pos, y_pos = np.random.uniform(

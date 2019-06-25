@@ -206,7 +206,7 @@ class DClawTurnRandomDynamics(DClawTurnRandom):
         super()._reset()
 
 @configurable(pickleable=True)
-class DClawImageTurn(BaseDClawTurn):
+class DClawTurnImage(BaseDClawTurn):
     """
     Observation including the image.
     """
@@ -216,13 +216,13 @@ class DClawImageTurn(BaseDClawTurn):
             target_angle_range,
             *args, **kwargs):
         self.image_shape = image_shape
-        self.init_angle_range = init_angle_range
-        self.target_angle_range = target_angle_range
-        super(DClawImageTurn, self).__init__(*args, **kwargs)
+        self._init_angle_range = init_angle_range
+        self._target_angle_range = target_angle_range
+        super(DClawTurnImage, self).__init__(*args, **kwargs)
 
     def get_obs_dict(self) -> Dict[str, np.ndarray]:
         width, height = self.image_shape[:2]
-        obs = super(DClawImageTurn, self).get_obs_dict()
+        obs = super(DClawTurnImage, self).get_obs_dict()
         image = self.render(mode='rgb_array', \
                             width=width, 
                             height=height).reshape(-1)
@@ -231,8 +231,27 @@ class DClawImageTurn(BaseDClawTurn):
 
     def _reset(self):
         self._initial_object_pos = np.random.uniform(
-                low=self.init_angle_range[0], high=self.init_angle_range[1])
+                low=self._init_angle_range[0], high=self._init_angle_range[1])
+        print("ANGLE RANGE:", self._init_angle_range, "OBJECT POS:", self._initial_object_pos)
         self._set_target_object_pos(
-                np.random.uniform(low=self.target_angle_range[0], 
-                    high=self.target_angle_range[1]))
+                np.random.uniform(low=self._target_angle_range[0], 
+                    high=self._target_angle_range[1]))
         super()._reset()
+
+@configurable(pickleable=True)
+class DClawTurnResetFree(DClawTurnImage):
+    """
+    Resets do not move the screw back to its original position.
+    """
+    
+    def _reset(self):
+        claw_state, object_state = self.robot.get_state(['dclaw', 'object'])
+        # Set initial position of the object as the previous angle
+        self._init_angle_range = (object_state.qpos, object_state.qpos)
+        super(DClawTurnResetFree, self)._reset()
+
+    def reset(self):
+        obs_dict = self.get_obs_dict()
+        for _ in range(15):
+            self._step(DEFAULT_CLAW_RESET_POSE)
+        return self._get_obs(obs_dict)

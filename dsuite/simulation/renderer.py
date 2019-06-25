@@ -108,7 +108,10 @@ class Renderer(abc.ABC):
     def _update_camera_properties(self, camera: Any):
         """Updates the given camera object with the current camera settings."""
         for key, value in self._camera_settings.items():
-            setattr(camera, key, value)
+            if key == 'lookat':
+                camera.lookat[:] = value
+            else:
+                setattr(camera, key, value)
 
     def __del__(self):
         """Automatically clean up when out of scope."""
