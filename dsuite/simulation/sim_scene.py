@@ -1,4 +1,4 @@
-# Copyright 2019 The DSuite Authors.
+# Copyright 2019 The D'Suite Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import abc
 import enum
-from typing import Any
+from typing import Any, Union
 
 from dsuite.simulation.renderer import Renderer
 
@@ -31,7 +31,7 @@ class SimScene(metaclass=abc.ABCMeta):
     """Encapsulates a MuJoCo robotics simulation."""
 
     @staticmethod
-    def create(*args, backend: SimBackend, **kwargs) -> 'SimScene':
+    def create(*args, backend: Union[SimBackend, int], **kwargs) -> 'SimScene':
         """Creates a new simulation scene.
 
         Args:
@@ -42,6 +42,7 @@ class SimScene(metaclass=abc.ABCMeta):
         Returns:
             A SimScene object.
         """
+        backend = SimBackend(backend)
         if backend == SimBackend.MUJOCO_PY:
             from dsuite.simulation.mjpy_sim_scene import MjPySimScene
             return MjPySimScene(*args, **kwargs)
