@@ -214,7 +214,47 @@ class RobotController(BaseController):
         assert config.denormalize_range is not None
 
         action = np.clip(action, -1.0, 1.0)
+
         return config.denormalize_center + (action * config.denormalize_range)
+
+    def _normalize_action(self, action: np.ndarray,
+                          config: RobotGroupConfig) -> np.ndarray:
+        """Normalizes the given action."""
+        if config.denormalize_center.shape != action.shape:
+            raise ValueError(
+                'Action shape ({}) does not match actuator shape: ({})'.format(
+                    action.shape, config.denormalize_center.shape))
+        assert config.denormalize_range is not None
+
+        action_offset = action - config.denormalize_center
+        normalized_action = action_offset / config.denormalize_range
+        return normalized_action
+
+    def normalize_action(self, control_groups: Dict[str, np.ndarray]):
+        """Normalize controls
+
+        Examples:
+            >>> robot.normalize_action({'dclaw': DEFAULT_CLAW_RESET_POSE})
+
+        Args:
+            control_groups: A dictionary of control group name to desired
+                control value to command the robot for a single timestep.
+                e.g. for a control group with position control, the control
+                value is an array of joint positions (in radians).
+        """
+        normalized_group_controls = {}
+        for group_name, control_values in control_groups.items():
+            config = self.get_config(group_name)
+
+            # Ignore if this is a hardware-only group.
+            if config.actuator_indices is None:
+                continue
+
+            # Denormalize and enforce action bounds.
+            normalized_control_values = self._normalize_action(
+                control_values, config)
+            normalized_group_controls[group_name] = normalized_control_values
+        return normalized_group_controls
 
     def _apply_action_bounds(self, action: np.ndarray,
                              config: RobotGroupConfig) -> np.ndarray:

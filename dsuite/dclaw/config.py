@@ -53,11 +53,12 @@ _FREE_OBJECT_SIM_CONFIG = {
         'object': {
             # 'qpos_indices': [-1],  # The object is the last qpos.
             # 'qpos_range': [(-np.pi, np.pi)],
+
             'qpos_indices': range(-6, 0),  # The object is the last qpos.
             'qpos_range': [
-                (-0.25, 0.25),     # restrict x
-                (-0.25, 0.25),     # restrict y
-                (0, 0.1),          # unrestricted z
+                (-0.15, 0.15),     # restrict x
+                (-0.15, 0.15),     # restrict y
+                (0, 0.25),          # unrestricted z
                 (-np.pi, np.pi), # unrestricted object orientation
                 (-np.pi, np.pi),
                 (-np.pi, np.pi)],

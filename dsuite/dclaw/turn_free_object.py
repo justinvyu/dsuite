@@ -153,9 +153,9 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         reward_dict = collections.OrderedDict((
             # Penalty for distance away from goal.
-            ('object_to_target_distance_cost', -5 * np.linalg.norm(
+            ('object_to_target_position_distance_cost', -5 * np.linalg.norm(
                 object_to_target_relative_position)),
-            ('object_to_target_orientation_cost', -5 * np.linalg.norm(
+            ('object_to_target_orientation_distance_cost', -5 * np.linalg.norm(
                 object_to_target_circle_distance)),
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
@@ -191,7 +191,6 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             np.array(target_qpos[3:]) + np.pi, 2 * np.pi) - np.pi
 
         # Mark the target position in sim.
-        ## TODO: Figure out what this should be
 
         self.model.body_pos[self._target_bid] = self._object_target_position
         self.model.body_quat[self._target_bid] = euler2quat(
@@ -259,7 +258,7 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
         self._last_object_orientation = obs_dict['object_orientation']
         return obs_dict
 
-    def _get_goal_qpos(self, obs_dict):
+    def _sample_goal_qpos(self, obs_dict):
         if self._swap_goal_upon_completion and \
            obs_dict['object_to_target_circle_distance'][2] < 0.10:
             self._goal_index = np.mod(self._goal_index + 1, 2)
@@ -272,9 +271,14 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
     def reset(self):
         obs_dict = self.get_obs_dict()
         if self._reset_fingers:
+            reset_action = self.robot.normalize_action(
+                {'dclaw': DEFAULT_CLAW_RESET_POSE})['dclaw']
+
             for _ in range(15):
-                self._step(DEFAULT_CLAW_RESET_POSE)
-            self._set_target_object_qpos(self._get_goal_qpos(obs_dict))
+                self._step(reset_action)
+
+        self._set_target_object_qpos(self._sample_goal_qpos(obs_dict))
+        return self._get_obs(self.get_obs_dict())
         else:
             self._set_target_object_qpos(self._get_goal_qpos(obs_dict))
         return self._get_obs(self.get_obs_dict())
