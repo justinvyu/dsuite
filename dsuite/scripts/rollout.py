@@ -34,7 +34,7 @@ import numpy as np
 
 import dsuite
 from dsuite.scripts.utils import parse_args
-
+from softlearning.misc.utils import save_video
 
 def do_rollouts(env,
                 num_episodes: int,
@@ -102,6 +102,8 @@ def do_rollouts(env,
             if (max_episode_length is not None
                     and len(episode_obs) >= max_episode_length):
                 done = True
+        if render_mode == "rgb_array":
+            save_video(episode_renders, f'/tmp/rollout/episode_{episode}.mp4', fps=1/env.dt)
 
         yield (episode_obs, episode_return, episode_infos, episode_renders,
                dict(durations))
