@@ -57,8 +57,8 @@ register(
     class_path='dsuite.dclaw.turn:DClawTurnImage')
 
 register(
-    env_id='DClawTurnResetFree-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnResetFree')
+    env_id='DClawTurnImageResetFree-v0',
+    class_path='dsuite.dclaw.turn:DClawTurnImageResetFree')
 
 #===============================================================================
 # Turn Free Object tasks

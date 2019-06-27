@@ -271,3 +271,4 @@ class DClawTurnImageResetFree(DClawTurnImage):
             self._step(DEFAULT_CLAW_RESET_POSE)
         self._reset()
         return self._get_obs(obs_dict)
+
