@@ -76,6 +76,10 @@ register(
     env_id='DClawTurnFreeValve3Image-v0',
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3Image')
 
+register(
+    env_id='DClawTurnRandomResetSingleGoal-v0',
+    class_path='dsuite.dclaw.turn:DClawTurnRandomResetSingleGoal')
+
 #===============================================================================
 # Screw tasks
 #===============================================================================

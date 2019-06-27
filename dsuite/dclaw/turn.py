@@ -207,6 +207,26 @@ class DClawTurnRandom(BaseDClawTurn):
 
 
 @configurable(pickleable=True)
+class DClawTurnRandomResetSingleGoal(BaseDClawTurn):
+    """Turns the object with a random initial and random target position."""
+    def __init__(self,
+                 *args,
+                 initial_object_pos_range=(-np.pi, np.pi),
+                 **kwargs):
+        self._initial_object_pos_range = initial_object_pos_range
+        return super(DClawTurnRandomResetSingleGoal, self).__init__(
+            *args, **kwargs)
+
+    def _reset(self):
+        # Initial position is +/- 180 degrees.
+        low, high = self._initial_object_pos_range
+        self._initial_object_pos = self.np_random.uniform(low=low, high=high)
+        # Target position is at 0 degrees.
+        self._set_target_object_pos(0)
+        super()._reset()
+
+
+@configurable(pickleable=True)
 class DClawTurnRandomDynamics(DClawTurnRandom):
     """Turns the object with a random initial and random target position.
 
