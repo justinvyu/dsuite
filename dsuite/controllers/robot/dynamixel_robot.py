@@ -1,4 +1,4 @@
-# Copyright 2019 The DSuite Authors.
+# Copyright 2019 The D'Suite Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -203,4 +203,4 @@ class DynamixelRobotController(HardwareRobotController):
             # position control.
             self._hardware.write_desired_pos(
                 self._all_motor_ids[total_motor_id_mask],
-                np.mod(total_qpos[total_motor_id_mask], 2 * np.pi))
+                total_qpos[total_motor_id_mask])

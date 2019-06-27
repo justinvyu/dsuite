@@ -1,4 +1,4 @@
-# Copyright 2019 The DSuite Authors.
+# Copyright 2019 The D'Suite Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,16 +16,9 @@
 
 To install:
 pip install -e .
-
-To install developer tooling:
-pip install -e '.[dev]'
-
-NOTE: To run on hardware, you will also need the DynamixelSDK.
->$ git clone https://github.com/ROBOTIS-GIT/DynamixelSDK.git
->$ export PYTHONPATH=/path/to/DynamixelSDK/python/src:$PYTHONPATH
-
 """
 
+import os
 import sys
 
 import setuptools
@@ -42,6 +35,14 @@ if version < MIN_PYTHON_VERSION:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+
+def get_requirements(file_name):
+    """Returns requirements from the given file."""
+    file_path = os.path.join(os.path.dirname(__file__), file_name)
+    with open(file_path, 'r') as f:
+        return [line.strip() for line in f]
+
+
 setuptools.setup(
     name="dsuite",
     version="0.1.0",
@@ -50,20 +51,9 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
-    install_requires=[
-        'gym',
-        'mujoco-py<2.1,>=2.0',
-        'numpy',
-        'pyserial',
-        'transforms3d',
-    ],
+    install_requires=get_requirements('requirements.txt'),
     extra_requires={
-        'dev': [
-            'parameterized',
-            'pylint',
-            'pytype',
-            'yapf',
-        ],
+        'dev': get_requirements('requirements.dev.txt'),
     },
     classifiers=[
         'Programming Language :: Python :: 3',
