@@ -246,7 +246,8 @@ class DClawTurnImage(DClawTurnFixed):
 
     def __init__(self, 
                  image_shape: np.ndarray, 
-                 *args, **kwargs):
+                 *args, 
+                 **kwargs):
         self.image_shape = image_shape
         super().__init__(*args, **kwargs)
 
@@ -294,14 +295,15 @@ class DClawTurnImageResetFree(DClawTurnImage):
         return self._get_obs(obs_dict)
 
 @configurable(pickleable=True)
-class DClawTurnImageResetFreeMultiGoal(DClawTurnImageResetFree):
+class DClawTurnImageMultiGoal(DClawTurnImage):
     def __init__(self,
                  goal_image_pools,
                  *args,
                  goal_completion_threshold=0.15,
-                 initial_goal_index=0,
+                 initial_goal_index=1,
                  use_concatenated_goal: bool = True,
                  reset_claw: bool = True,
+                 reset_free: bool = False,
                  **kwargs):
         super().__init__(*args, **kwargs)
         
@@ -317,11 +319,19 @@ class DClawTurnImageResetFreeMultiGoal(DClawTurnImageResetFree):
         # Initialize a goal
         self._goal_image = self.sample_goal_image()
 
-        self._goals = [np.pi, 0.]
+        self._goals = [np.pi, 0.25]
         self._goal_completion_threshold = goal_completion_threshold
         self._use_concatenated_goal = use_concatenated_goal
 
         self._reset_claw = reset_claw
+        self._reset_free = reset_free
+        self._reset()
+
+    def _reset(self):
+        if self._reset_free:
+            self._set_target_object_pos(self._goals[self._goal_index])
+        else:
+            super()._reset()
 
     def reset(self):
         obs_dict = self.get_obs_dict()
@@ -332,7 +342,7 @@ class DClawTurnImageResetFreeMultiGoal(DClawTurnImageResetFree):
         print(object_target_angle_dist)
         if object_target_angle_dist < self._goal_completion_threshold:
             self.switch_goal()
-        # self._reset()
+        self._reset()
         return self._get_obs(obs_dict)
 
     def _get_obs(self, obs_dict=None):
