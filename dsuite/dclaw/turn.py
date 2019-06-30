@@ -255,7 +255,8 @@ class DClawTurnImage(DClawTurnFixed):
         obs = super(DClawTurnImage, self).get_obs_dict()
         image = self.render(mode='rgb_array', \
                             width=width,
-                            height=height).reshape(-1)
+                            height=height,
+                            camera_id=1).reshape(-1)
         obs['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
         return obs
 
@@ -292,3 +293,71 @@ class DClawTurnImageResetFree(DClawTurnImage):
         self._reset()
         return self._get_obs(obs_dict)
 
+@configurable(pickleable=True)
+class DClawTurnImageResetFreeMultiGoal(DClawTurnImageResetFree):
+    def __init__(self,
+                 goal_image_pools,
+                 *args,
+                 goal_completion_threshold=0.15,
+                 initial_goal_index=0,
+                 use_concatenated_goal: bool = True,
+                 reset_claw: bool = True,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # `goal_image_pools` is an array of dicts, where each
+        # index i corresponds to the ith set of goal images.
+        self._goal_image_pools = goal_image_pools
+        self.num_goals = len(goal_image_pools)
+        
+        self._goal_index = initial_goal_index
+        assert self._goal_index >= 0 and self._goal_index < self.num_goals, \
+            "Initial goal cannot be outside the range 0-{}".format(self.num_goals - 1)
+
+        # Initialize a goal
+        self._goal_image = self.sample_goal_image()
+
+        self._goals = [np.pi, 0.]
+        self._goal_completion_threshold = goal_completion_threshold
+        self._use_concatenated_goal = use_concatenated_goal
+
+        self._reset_claw = reset_claw
+
+    def reset(self):
+        obs_dict = self.get_obs_dict()
+        if self._reset_claw:
+            for _ in range(15):
+                self._step(DEFAULT_CLAW_RESET_POSE)
+        object_target_angle_dist = obs_dict['object_to_target_angle_dist']
+        print(object_target_angle_dist)
+        if object_target_angle_dist < self._goal_completion_threshold:
+            self.switch_goal()
+        # self._reset()
+        return self._get_obs(obs_dict)
+
+    def _get_obs(self, obs_dict=None):
+        obs_dict = self.get_obs_dict()
+        img_obs = obs_dict['image']
+        # Concatenate goal image.
+        if self._use_concatenated_goal:
+            img_obs = np.concatenate([img_obs, self._goal_image])
+        return img_obs
+
+    def switch_goal(self):
+        # For now, just increment by one and mod by # of goals.
+        self._goal_index = np.mod(self._goal_index + 1, self.num_goals)
+        new_target = self._goals[self._goal_index]
+
+        print("NEW GOAL IS:", new_target)
+        self._set_target_object_pos(new_target)
+        self._goal_image = self.sample_goal_image()
+
+    """
+    Goal example pools functions
+    """
+
+    def sample_goal_image(self):
+        # Get the pool of goal images from the dictionary at the correct goal index.
+        goal_images = self._goal_image_pools[self._goal_index]['image_desired_goal']
+        rand_img_idx = np.random.randint(0, goal_images.shape[0])
+        return goal_images[rand_img_idx]
