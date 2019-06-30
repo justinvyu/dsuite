@@ -302,6 +302,7 @@ class DClawTurnImageMultiGoal(DClawTurnImage):
                  goal_completion_threshold=0.15,
                  initial_goal_index=1,
                  use_concatenated_goal: bool = True,
+                 swap_goals_upon_completion: bool = True,
                  reset_claw: bool = True,
                  reset_free: bool = False,
                  **kwargs):
@@ -319,9 +320,10 @@ class DClawTurnImageMultiGoal(DClawTurnImage):
         # Initialize a goal
         self._goal_image = self.sample_goal_image()
 
-        self._goals = [np.pi, 0.25]
+        self._goals = [np.pi, 0.]
         self._goal_completion_threshold = goal_completion_threshold
         self._use_concatenated_goal = use_concatenated_goal
+        self._swap_goals_upon_completion = swap_goals_upon_completion
 
         self._reset_claw = reset_claw
         self._reset_free = reset_free
@@ -331,6 +333,10 @@ class DClawTurnImageMultiGoal(DClawTurnImage):
         if self._reset_free:
             self._set_target_object_pos(self._goals[self._goal_index])
         else:
+            target = self._goals[self._goal_index]
+            init = self._goals[1 - self._goal_index]
+            self._init_object_pos_range = (init, init)
+            self._target_pos_range = (target, target)
             super()._reset()
 
     def reset(self):
@@ -340,8 +346,11 @@ class DClawTurnImageMultiGoal(DClawTurnImage):
                 self._step(DEFAULT_CLAW_RESET_POSE)
         object_target_angle_dist = obs_dict['object_to_target_angle_dist']
         print(object_target_angle_dist)
-        if object_target_angle_dist < self._goal_completion_threshold:
+        if self._swap_goals_upon_completion and \
+            object_target_angle_dist < self._goal_completion_threshold:
             self.switch_goal()
+        else:
+            self.switch_goal(random=True)
         self._reset()
         return self._get_obs(obs_dict)
 
@@ -353,14 +362,17 @@ class DClawTurnImageMultiGoal(DClawTurnImage):
             img_obs = np.concatenate([img_obs, self._goal_image])
         return img_obs
 
-    def switch_goal(self):
-        # For now, just increment by one and mod by # of goals.
-        self._goal_index = np.mod(self._goal_index + 1, self.num_goals)
-        new_target = self._goals[self._goal_index]
-
-        print("NEW GOAL IS:", new_target)
-        self._set_target_object_pos(new_target)
+    def set_goal(self):
+        self._set_target_object_pos(self._goals[self._goal_index])
         self._goal_image = self.sample_goal_image()
+
+    def switch_goal(self, random=False):
+        # For now, just increment by one and mod by # of goals.
+        if random:
+            self._goal_index = np.random.randint(low=0, high=self.num_goals)
+        else:
+            self._goal_index = np.mod(self._goal_index + 1, self.num_goals)
+        self.set_goal()
 
     """
     Goal example pools functions
