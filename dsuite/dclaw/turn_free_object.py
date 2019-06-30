@@ -77,15 +77,15 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         self._target_bid = self.model.body_name2id('target')
 
         # The following are modified (possibly every reset) by subclasses.
+        self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE
         self._initial_object_qpos = (0, 0, 0, 0, 0, 0)
         self._initial_object_qvel = (0, 0, 0, 0, 0, 0)
         self._set_target_object_qpos((0, 0, 0, 0, 0, 0))
 
     def _reset(self):
         """Resets the environment."""
-
         self._reset_dclaw_and_object(
-            claw_pos=DEFAULT_CLAW_RESET_POSE,
+            claw_pos=self._initial_claw_qpos,
             object_pos=np.atleast_1d(self._initial_object_qpos),
             object_vel=np.atleast_1d(self._initial_object_qvel),
             # guide_pos=np.atleast_1d(self._object_target_qpos))
@@ -136,7 +136,9 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             ('target_orientation_sin', np.sin(target_orientation)),
             ('object_to_target_relative_position', object_to_target_relative_position),
             ('object_to_target_relative_orientation', object_to_target_relative_orientation),
-            ('object_to_target_circle_distance', object_to_target_circle_distance),
+            ('object_to_target_position_distance', np.linalg.norm(object_to_target_relative_position)),
+            ('object_to_target_circle_distances', object_to_target_circle_distance),
+            ('object_to_target_circle_distance', np.linalg.norm(object_to_target_circle_distance)),
         ))
 
     def get_reward_dict(
@@ -146,17 +148,18 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     ) -> Dict[str, np.ndarray]:
         """Returns the reward for the given action and observation."""
         # object_to_target_relative_orientation = obs_dict['object_to_target_relative_orientation']
-        object_to_target_relative_position = obs_dict['object_to_target_relative_position']
+
         claw_vel = obs_dict['claw_qvel']
 
+        object_to_target_position_distance = obs_dict['object_to_target_position_distance']
         object_to_target_circle_distance = obs_dict['object_to_target_circle_distance']
 
         reward_dict = collections.OrderedDict((
             # Penalty for distance away from goal.
-            ('object_to_target_position_distance_cost', -5 * np.linalg.norm(
-                object_to_target_relative_position)),
-            ('object_to_target_orientation_distance_cost', -5 * np.linalg.norm(
-                object_to_target_circle_distance)),
+            ('object_to_target_position_distance_cost', -5 *
+                object_to_target_position_distance),
+            ('object_to_target_orientation_distance_cost', -5 *
+                object_to_target_circle_distance),
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
              -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)
@@ -165,8 +168,8 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             ('joint_vel_cost', -1 * np.linalg.norm(claw_vel[claw_vel >= 0.5])),
 
             # Reward for close proximity with goal.
-            ('bonus_small', 10 * (object_to_target_circle_distance[:, 2] < 0.25)),
-            ('bonus_big', 50 * (object_to_target_circle_distance[:, 2] < 0.10)),
+            ('bonus_small', 10 * (object_to_target_circle_distance < 0.25)),
+            ('bonus_big', 50 * (object_to_target_circle_distance < 0.10)),
         ))
         return reward_dict
 
@@ -179,7 +182,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         return collections.OrderedDict((
             ('points', 1.0 - np.minimum(
-                obs_dict['object_to_target_circle_distance'][:, 2], np.pi) / np.pi),
+                obs_dict['object_to_target_circle_distances'][:, 2], np.pi) / np.pi),
             ('success', reward_dict['bonus_big'] > 0.0),
         ))
 
@@ -232,7 +235,7 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
 
     def __init__(self,
                  swap_goal_upon_completion: bool = True,
-                 reset_fingers=True,
+                 reset_fingers=False,
                  **kwargs):
         self._last_claw_qpos = DEFAULT_CLAW_RESET_POSE
         self._last_object_position = np.array([0, 0, 0])
@@ -254,25 +257,51 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
 
         obs_dict = super().get_obs_dict()
         self._last_claw_qpos = obs_dict['claw_qpos']
-        self._last_object_position = obs_dict['object_position']
+        object_position = self._last_object_position = obs_dict['object_position']
         self._last_object_orientation = obs_dict['object_orientation']
         return obs_dict
 
+    def get_reward_dict(
+            self,
+            action: np.ndarray,
+            obs_dict: Dict[str, np.ndarray],
+    ) -> Dict[str, np.ndarray]:
+        """Returns the reward for the given action and observation."""
+        # object_to_target_relative_orientation = obs_dict['object_to_target_relative_orientation']
+        reward_dict = super().get_reward_dict(action, obs_dict)
+
+        object_to_target_position_distance = obs_dict['object_to_target_position_distance']
+
+        object_to_target_circle_distance = obs_dict['object_to_target_circle_distance']
+
+        # reward_dict['object_to_target_position_distance_cost'] = -20 * np.linalg.norm(
+        #         object_to_target_relative_position)
+        # reward_dict['object_to_target_orientation_distance_cost'] = -1 * np.linalg.norm(
+        #         object_to_target_circle_distance)
+        reward_dict['object_to_target_position_distance_cost'] = - 1 * \
+            np.log(20 * object_to_target_position_distance + 1e-4)
+        reward_dict['object_to_target_orientation_distance_cost'] = - 0 * \
+            np.log(1 * object_to_target_circle_distance + 0.01)
+        return reward_dict
+
     def _sample_goal_qpos(self, obs_dict):
+        object_to_target_position_distance = obs_dict['object_to_target_position_distance']
+        object_to_target_orientation_distance = obs_dict['object_to_target_circle_distance']
         if self._swap_goal_upon_completion and \
-           obs_dict['object_to_target_circle_distance'][2] < 0.10:
+           (object_to_target_orientation_distance < 0.1 or True) and \
+           object_to_target_position_distance < 0.01:
             self._goal_index = np.mod(self._goal_index + 1, 2)
         else:
-            goal = np.pi
+            goal = (0, 0, 0, 0, 0, np.pi)
 
         goal = self._goals[self._goal_index]
-        return (0, 0, 0, 0, 0, goal)
+        return goal
 
     def reset(self):
         obs_dict = self.get_obs_dict()
         if self._reset_fingers:
             reset_action = self.robot.normalize_action(
-                {'dclaw': DEFAULT_CLAW_RESET_POSE})['dclaw']
+                {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
 
             for _ in range(15):
                 self._step(reset_action)
