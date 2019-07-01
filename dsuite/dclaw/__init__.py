@@ -60,6 +60,14 @@ register(
     env_id='DClawTurnImageResetFree-v0',
     class_path='dsuite.dclaw.turn:DClawTurnImageResetFree')
 
+register(
+    env_id='DClawTurnImageMultiGoal-v0',
+    class_path='dsuite.dclaw.turn:DClawTurnImageMultiGoal')
+
+register(
+    env_id='DClawTurnImageMultiGoalResetFree-v0',
+    class_path='dsuite.dclaw.turn:DClawTurnImageMultiGoalResetFree')
+
 #===============================================================================
 # Turn Free Object tasks
 #===============================================================================

@@ -57,7 +57,7 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
                  sim_model: Any,
                  observation_keys: Optional[Sequence[str]] = None,
                  reward_keys: Optional[Sequence[str]] = None,
-                 use_dict_obs: bool = False,
+                 use_dict_obs: bool = True,
                  frame_skip: int = 1,
                  camera_settings: Optional[Dict] = None,
                  sim_backend: SimBackend = DEFAULT_SIM_BACKEND):
