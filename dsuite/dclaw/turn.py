@@ -24,8 +24,8 @@ from typing import Dict, Optional, Sequence
 import numpy as np
 from transforms3d.euler import euler2quat
 
-from dsuite.dclaw.base_env import (BaseDClawObjectEnv,
-                                       DEFAULT_CLAW_RESET_POSE)
+from dsuite.dclaw.base_env import BaseDClawObjectEnv
+from dsuite.simulation.randomize import SimRandomizer
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 
@@ -37,6 +37,9 @@ DEFAULT_OBSERVATION_KEYS = (
     'last_action',
     'target_error',
 )
+
+# Reset pose for the claw joints.
+RESET_POSE = [0, -np.pi / 3, np.pi / 3] * 3
 
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_v0.xml'
 
@@ -66,7 +69,7 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             frame_skip=frame_skip,
             **kwargs)
 
-        self._desired_claw_pos = DEFAULT_CLAW_RESET_POSE
+        self._desired_claw_pos = RESET_POSE
         self._last_action = np.zeros(9)
 
         self._target_bid = self.model.body_name2id('target')
@@ -79,10 +82,10 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     def _reset(self):
         """Resets the environment."""
         self._reset_dclaw_and_object(
-            claw_pos=DEFAULT_CLAW_RESET_POSE,
-            object_pos=np.atleast_1d(self._initial_object_pos),
-            object_vel=np.atleast_1d(self._initial_object_vel),
-            guide_pos=np.atleast_1d(self._target_object_pos))
+            claw_pos=RESET_POSE,
+            object_pos=self._initial_object_pos,
+            object_vel=self._initial_object_vel,
+            guide_pos=self._target_object_pos)
 
     def _step(self, action: np.ndarray):
         """Applies an action to the robot."""
@@ -194,7 +197,30 @@ class DClawTurnRandomDynamics(DClawTurnRandom):
     The dynamics of the simulation are randomized each episode.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._randomizer = SimRandomizer(self.sim_scene, self.np_random)
+        self._dof_indices = (
+            self.robot.get_config('dclaw').qvel_indices.tolist() +
+            self.robot.get_config('object').qvel_indices.tolist())
+
     def _reset(self):
-        self._randomize_claw_sim()
-        self._randomize_object_sim()
+        self._randomizer.randomize_bodies(
+            ['mount'],
+            position_perturb_range=(-0.01, 0.01),
+        )
+        self._randomizer.randomize_geoms(
+            ['mount'],
+            color_range=(0.2, 0.9),
+        )
+        self._randomizer.randomize_geoms(
+            parent_body_names=['valve'],
+            color_range=(0.2, 0.9),
+            size_perturb_range=(-0.003, 0.003),
+        )
+        self._randomizer.randomize_dofs(
+            self._dof_indices,
+            damping_range=(0.1, 0.5),
+            friction_loss_range=(0.001, 0.005),
+        )
         super()._reset()

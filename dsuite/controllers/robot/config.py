@@ -87,7 +87,7 @@ class RobotGroupConfig:
         if qpos_indices is not None:
             nq = sim_scene.model.nq
             assert all(-nq <= i < nq for i in qpos_indices), \
-                'All qpos indices must be in [-{}, {}]'.format(-nq, nq - 1)
+                'All qpos indices must be in [-{}, {}]'.format(nq, nq - 1)
             self.qpos_indices = np.array(qpos_indices, dtype=int)
 
         if qvel_indices is None:
@@ -98,7 +98,7 @@ class RobotGroupConfig:
         if qvel_indices is not None:
             nv = sim_scene.model.nv
             assert all(-nv <= i < nv for i in qvel_indices), \
-                'All qvel indices must be in [-{}, {}]'.format(-nv, nv - 1)
+                'All qvel indices must be in [-{}, {}]'.format(nv, nv - 1)
             self.qvel_indices = np.array(qvel_indices, dtype=int)
 
         self.sim_observation_noise = sim_observation_noise
@@ -132,7 +132,7 @@ class RobotGroupConfig:
             nu = sim_scene.model.nu
             assert all(-nu <= i < nu for i in actuator_indices), \
                 'All actuator indices must be in [-{}, {}]'.format(
-                    -nu, nu - 1)
+                    nu, nu - 1)
             self.actuator_indices = np.array(actuator_indices, dtype=int)
 
         if actuator_range is None:

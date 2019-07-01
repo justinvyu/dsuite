@@ -16,7 +16,11 @@
 
 import numpy as np
 
+from dsuite.controllers.robot.dynamixel_utils import CalibrationMap
 from dsuite.utils.config_utils import merge_configs
+
+# Convenience constants.
+PI = np.pi
 
 # Base configuration for a DClaw robot in simulation.
 DCLAW_SIM_CONFIG = {
@@ -25,11 +29,11 @@ DCLAW_SIM_CONFIG = {
         'dclaw': {
             'qpos_indices': range(9),
             'qpos_range': [
-                (-np.pi / 4, np.pi / 4),  # 45 degrees for top servos.
-                (-np.pi / 3, np.pi / 3),  # 60 degrees for middle servos.
-                (-np.pi / 2, np.pi / 2),  # 90 degrees for bottom servos.
+                (-PI / 4, PI / 4),  # 45 degrees for top servos.
+                (-PI / 3, PI / 3),  # 60 degrees for middle servos.
+                (-PI / 2, PI / 2),  # 90 degrees for bottom servos.
             ] * 3,
-            'qvel_range': [(-1.5, 1.5)] * 9,
+            'qvel_range': [(-2 * PI / 3, 2 * PI / 3)] * 9,
             'sim_observation_noise': 0.05,
         },
     }
@@ -40,7 +44,7 @@ _OBJECT_SIM_CONFIG = {
     'groups': {
         'object': {
             'qpos_indices': [-1],  # The object is the last qpos.
-            'qpos_range': [(-np.pi, np.pi)],
+            'qpos_range': [(-PI, PI)],
             'sim_observation_noise': 0.05,
         },
         'guide': {},  # The guide group is a no-op in simulation.
@@ -55,8 +59,6 @@ DCLAW_HARDWARE_CONFIG = merge_configs(
         'groups': {
             'dclaw': {
                 'motor_ids': [10, 11, 12, 20, 21, 22, 30, 31, 32],
-                'calib_scale': [1] * 9,
-                'calib_offset': [-np.pi / 2, -np.pi, -np.pi] * 3,
             },
         }
     },
@@ -65,15 +67,11 @@ DCLAW_HARDWARE_CONFIG = merge_configs(
 # Base configuration for the object on hardware.
 _OBJECT_HARDWARE_CONFIG = merge_configs(
     _OBJECT_SIM_CONFIG,
-    {
-        'groups': {
-            'object': {
-                'motor_ids': [50],
-                'calib_scale': [1],
-                'calib_offset': [-np.pi],
-            },
-        }
-    },
+    {'groups': {
+        'object': {
+            'motor_ids': [50],
+        },
+    }},
 )
 
 # Configuration for a DClaw with an object in simulation.
@@ -88,23 +86,40 @@ DCLAW_OBJECT_HARDWARE_CONFIG = merge_configs(
             # Make a group that we disable in hardware during reset.
             'disable_in_reset': {
                 'motor_ids': [10, 12, 20, 22, 30, 32, 50],
-                'calib_scale': [1] * 7,
-                'calib_offset': [-np.pi / 2, -np.pi] * 3 + [-np.pi],
             },
         }
     },
 )
 
 # Configuration for a DClaw with an object and guide motor in hardware.
+# NOTE: This motor is optional and is used to show the goal position.
 DCLAW_OBJECT_GUIDE_HARDWARE_CONFIG = merge_configs(
     DCLAW_OBJECT_HARDWARE_CONFIG,
     {
         'groups': {
             'guide': {
                 'motor_ids': [60],
-                'calib_scale': [1],
-                'calib_offset': [-np.pi],
             }
         },
     },
 )
+
+# Mapping of motor ID to (scale, offset).
+DEFAULT_DCLAW_CALIBRATION_MAP = CalibrationMap({
+    # Finger 1
+    10: (1, -PI / 2),
+    11: (1, -PI),
+    12: (1, -PI),
+    # Finger 2
+    20: (1, -PI / 2),
+    21: (1, -PI),
+    22: (1, -PI),
+    # Finger 3
+    30: (1, -PI / 2),
+    31: (1, -PI),
+    32: (1, -PI),
+    # Object
+    50: (1, -PI),
+    # Guide
+    60: (1, -PI),
+})

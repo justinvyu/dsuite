@@ -14,6 +14,7 @@
 
 """Communication using the DynamixelSDK."""
 
+import atexit
 import logging
 import time
 from typing import Iterable, Optional, Union, Tuple
@@ -40,11 +41,24 @@ DEFAULT_POS_SCALE = 2.0 * np.pi / 4096  # 0.088 degrees
 DEFAULT_VEL_SCALE = 0.229 * 2.0 * np.pi / 60.0  # 0.229 rpm
 
 
+def dynamixel_cleanup_handler():
+    """Cleanup function to ensure Dynamixels are disconnected properly."""
+    open_clients = list(DynamixelClient.OPEN_CLIENTS)
+    for open_client in open_clients:
+        if open_client.port_handler.is_using:
+            logging.warning('Forcing client to close.')
+        open_client.port_handler.is_using = False
+        open_client.disconnect()
+
+
 class DynamixelClient:
     """Client for communicating with Dynamixel motors.
 
     NOTE: This only supports Protocol 2.
     """
+
+    # The currently open clients.
+    OPEN_CLIENTS = set()
 
     def __init__(self,
                  motor_ids: Iterable[int],
@@ -87,6 +101,8 @@ class DynamixelClient:
             vel_scale=vel_scale if vel_scale is not None else DEFAULT_VEL_SCALE)
         self._sync_writers = {}
 
+        self.OPEN_CLIENTS.add(self)
+
     @property
     def is_connected(self) -> bool:
         return self.port_handler.is_open
@@ -119,11 +135,14 @@ class DynamixelClient:
     def disconnect(self):
         if not self.is_connected:
             return
-        self.port_handler.clearPort()
-        self.port_handler.is_using = False
+        if self.port_handler.is_using:
+            logging.error('Port handler in use; cannot disconnect.')
+            return
         # # Ensure motors are disabled at the end.
         self.set_torque_enabled(self.motor_ids, False, retries=0)
         self.port_handler.closePort()
+        if self in self.OPEN_CLIENTS:
+            self.OPEN_CLIENTS.remove(self)
 
     def set_torque_enabled(self,
                            motor_ids: Iterable[int],
@@ -392,6 +411,9 @@ class DynamixelPosVelReader(DynamixelReader):
         """Returns a copy of the data."""
         return self._pos_data.copy(), self._vel_data.copy()
 
+
+# Register global cleanup function.
+atexit.register(dynamixel_cleanup_handler)
 
 if __name__ == '__main__':
     import argparse

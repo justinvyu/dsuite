@@ -16,7 +16,7 @@
 
 import abc
 import enum
-from typing import Any, Union
+from typing import Any, Callable, Union
 
 from dsuite.simulation.renderer import Renderer
 
@@ -74,6 +74,10 @@ class SimScene(metaclass=abc.ABCMeta):
 
         self.renderer = self._create_renderer(self.sim)
 
+        # Save initial values.
+        self.init_qpos = self.data.qpos.ravel().copy()
+        self.init_qvel = self.data.qvel.ravel().copy()
+
     @property
     def step_duration(self):
         """Returns the simulation step duration in seconds."""
@@ -90,6 +94,19 @@ class SimScene(metaclass=abc.ABCMeta):
             self.sim.step()
             self.renderer.refresh_window()
 
+    def disable_option(self,
+                       constraint_solver: bool = False,
+                       contact: bool = False,
+                       gravity: bool = False):
+        """Disables an option in the simulation."""
+        # http://www.mujoco.org/book/APIreference.html#mjtDisableBit
+        if constraint_solver:
+            self.model.opt.disableflags |= (1 << 0)
+        if contact:
+            self.model.opt.disableflags |= (1 << 4)
+        if gravity:
+            self.model.opt.disableflags |= (1 << 6)
+
     @abc.abstractmethod
     def copy_model(self) -> Any:
         """Returns a copy of the MjModel object."""
@@ -103,13 +120,21 @@ class SimScene(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
+    def upload_height_field(self, hfield_id: int):
+        """Uploads the height field to the rendering context."""
+
+    @abc.abstractmethod
+    def get_handle(self, value: Any) -> Any:
+        """Returns a handle that can be passed to mjlib methods."""
+
+    @abc.abstractmethod
+    def get_mjlib(self) -> Any:
+        """Returns an interface to the low-level MuJoCo API."""
+
+    @abc.abstractmethod
     def _load_simulation(self, model_handle: Any) -> Any:
         """Loads the simulation from the given model handle."""
 
     @abc.abstractmethod
     def _create_renderer(self, sim: Any) -> Renderer:
         """Creates a renderer for the given simulation."""
-
-    @abc.abstractmethod
-    def _get_mjlib(self) -> Any:
-        """Returns an interface to the low-level MuJoCo API."""

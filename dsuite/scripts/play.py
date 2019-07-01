@@ -37,26 +37,21 @@ $> python dsuite.scripts.play -e DClawTurnFixed-v0
 
 import collections
 import cmd
+import logging
 import time
 import threading
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional
 
 import gym
 import numpy as np
 
 import dsuite
-from dsuite.scripts.utils import parse_args
+from dsuite.scripts.utils import parse_env_args
 from dsuite.controllers.robot import DynamixelRobotController
 
 MIN_FRAME_TIME = 1.0 / 60.0
 
 INTRODUCTION = """Interactive shell for Adept Environments.
-
-Usage example:
->>> load DClawTurnFixed-v0
->>> action [0]*9
-Sending action: [0, 0, 0, 0, 0, 0, 0, 0, 0]
->>> quit
 
 Type `help` or `?` to list commands.
 """
@@ -298,18 +293,8 @@ class PlayShell(cmd.Cmd):
         self.close()
 
 
-def _parse_key_values(user_entries: Sequence[str]) -> Dict[str, Any]:
-    """Parses a list of `key:value,key:value,...` strings as a dictionary."""
-    env_params = {}
-    for user_text in user_entries:
-        components = user_text.split('=')
-        if len(components) != 2:
-            raise ValueError('Key-values must be specified as `key:value`')
-        env_params[components[0]] = eval(components[1])
-    return env_params
-
-
 if __name__ == '__main__':
-    env_id, params, _ = parse_args()
+    env_id, params, _ = parse_env_args()
+    logging.basicConfig(level=logging.INFO)
     repl = PlayShell(env_name=env_id, env_params=params)
     repl.cmdloop()

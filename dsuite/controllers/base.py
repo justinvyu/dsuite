@@ -18,9 +18,11 @@ A Controller provides a unified API between simulation and hardware.
 """
 
 import abc
-from collections import deque
 import logging
-from typing import Any, Dict, NewType, Sequence, Union
+import sys
+from typing import Any, Dict, NewType, Optional, Sequence, Union
+
+import numpy as np
 
 from dsuite.simulation.sim_scene import SimScene
 
@@ -36,28 +38,34 @@ class BaseController(abc.ABC):
             self,
             sim_scene: SimScene,
             groups: Dict[str, Dict],
-            state_history_len: int = 0,
+            random_state: Optional[np.random.RandomState] = None,
     ):
         """Initializes a new controller.
 
         Args:
             sim_scene: The simulation to control.
             groups: Group configurations for reading/writing state.
-            state_history_len: Maximum length for history of previous states.
+            random_state: A random state to use for generating noise.
         """
         self.sim_scene = sim_scene
+        self.random_state = random_state
+
+        if self.random_state is None:
+            logging.info(
+                'Random state not given; observation noise will be ignored')
 
         # Process all groups.
         self.groups = {}
         for group_name, group_config in groups.items():
-            self.groups[group_name] = self._process_group(**group_config)
-
-        # Keep track of state history along with relative timesteps
-        self._state_history = None
-        if state_history_len > 0:
-            logging.debug('History of max length %s will be kept for %s',
-                          state_history_len, self.__class__.__name__)
-            self._state_history = deque(maxlen=state_history_len)
+            try:
+                config = self._process_group(**group_config)
+            except Exception as e:
+                raise type(e)('[{}] Error parsing group "{}": {}'.format(
+                    self.__class__.__name__,
+                    group_name,
+                    str(e),
+                )).with_traceback(sys.exc_info()[2])
+            self.groups[group_name] = config
 
     def close(self):
         """Cleans up any resources used by the controller."""
@@ -66,7 +74,7 @@ class BaseController(abc.ABC):
             self,
             groups: Union[str, Sequence[str]],
     ) -> Union[GroupState, Sequence[GroupState]]:
-        """(Public) Returns the state of the given groups.
+        """Returns the state of the given groups.
 
         Args:
             groups: Either a single group name or a list of group names of the
@@ -82,45 +90,9 @@ class BaseController(abc.ABC):
             states = self._get_group_states(
                 [self.get_config(name) for name in groups])
 
-        if self._state_history is not None:
-            self._state_history.append(states)
-
         if isinstance(groups, str):
             return states[0]
         return states
-
-    def get_past_states(
-            self,
-            n: int = 1,
-            i: int = None,
-    ) -> Union[GroupState, Sequence[GroupState]]:
-        """Returns previous state or list of states from the state history.
-
-        *Note* States are returned in reverse time order [newest, ... , oldest].
-        Args:
-            n: Number of previous states to return. If None, return the
-                entire state history.
-            i: If not None, ignore n and return the last i-th state.
-
-        Returns:
-            State object or list of state objects.
-        """
-        # Return a specific index of the state history
-        if i is not None:
-            # Clip to boundaries of state history
-            clipped_i = max(0, min(i, len(self._state_history)))
-            return self._state_history[-clipped_i]
-
-        # Return the last single item in the state history
-        if n == 1:
-            return self._state_history[-1]
-
-        # Return the last N items of state history (or all of it)
-        history_list = list(self._state_history)
-        history_list.reverse()
-        if n is None:
-            return history_list
-        return history_list[:n]
 
     def get_config(self, group_name: str) -> GroupConfig:
         """Returns the configuration for a group."""
@@ -148,4 +120,4 @@ class BaseController(abc.ABC):
     @abc.abstractmethod
     def _get_group_states(
             self, configs: Sequence[GroupConfig]) -> Sequence[GroupState]:
-        """(Private) Returns the states for the given group configurations."""
+        """Returns the states for the given group configurations."""

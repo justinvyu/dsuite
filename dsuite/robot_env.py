@@ -91,6 +91,12 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
         self._action_space = None
         self._state_space = None
 
+        # The following are populated by step() and/or reset().
+        self.last_obs_dict = None
+        self.last_reward_dict = None
+        self.last_score_dict = None
+        self.is_done = False
+
         # Load the simulation.
         self.sim_scene = SimScene.create(
             sim_model, backend=sim_backend, frame_skip=frame_skip)
@@ -169,6 +175,16 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
         """Returns the step duration of each step, in seconds."""
         return self.sim_scene.step_duration
 
+    @property
+    def obs_dim(self) -> int:
+        """Returns the size of the observation space.
+
+        NOTE: This is for compatibility with gym.MujocoEnv.
+        """
+        if not isinstance(self.observation_space, spaces.Box):
+            raise NotImplementedError('`obs_dim` only supports Box spaces.')
+        return np.prod(self.observation_space.shape).item()
+
     def seed(self, seed: Optional[int] = None) -> Sequence[int]:
         """Seeds the environment.
 
@@ -192,7 +208,14 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
         self.sim.reset()
         self.sim.forward()
         self._reset()
-        return self._get_obs()
+
+        obs_dict = self.get_obs_dict()
+        self.last_obs_dict = obs_dict
+        self.last_reward_dict = None
+        self.last_score_dict = None
+        self.is_done = False
+
+        return self._get_obs(obs_dict)
 
     def step(self, action: Action) -> Tuple[Observation, float, bool, Dict]:
         """Runs one timestep of the environment with the given action.
@@ -219,6 +242,7 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
 
         # Get the observation after the step.
         obs_dict = self.get_obs_dict()
+        self.last_obs_dict = obs_dict
         flattened_obs = self._get_obs(obs_dict)
 
         # Get the rewards for the observation.
@@ -232,16 +256,19 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
 
         # Calculate the total reward.
         reward_dict = {k: v.item() for k, v in batched_reward_dict.items()}
+        self.last_reward_dict = reward_dict
         reward = self._get_total_reward(reward_dict)
 
         # Calculate the score.
         batched_score_dict = self.get_score_dict(batched_obs_dict,
                                                  batched_reward_dict)
         score_dict = {k: v.item() for k, v in batched_score_dict.items()}
+        self.last_score_dict = score_dict
 
         # Get whether the episode should end.
         dones = self.get_done(batched_obs_dict, batched_reward_dict)
         done = dones.item()
+        self.is_done = done
 
         # Combine the dictionaries as the auxiliary information.
         info = collections.OrderedDict()
@@ -486,6 +513,8 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
 
         # Instantiate the controller.
         controller = controller_cls(
-            sim_scene=self.sim_scene, **controller_kwargs)
+            sim_scene=self.sim_scene,
+            random_state=self.np_random,
+            **controller_kwargs)
         self._controllers.append(controller)
         return controller
