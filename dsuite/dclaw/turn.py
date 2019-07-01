@@ -257,7 +257,7 @@ class DClawTurnImage(DClawTurnFixed):
         image = self.render(mode='rgb_array', \
                             width=width,
                             height=height,
-                            camera_id=1).reshape(-1)
+                            camera_id=-1).reshape(-1)
         obs['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
         return obs
 
@@ -295,10 +295,10 @@ class DClawTurnImageResetFree(DClawTurnImage):
         return self._get_obs(obs_dict)
 
 @configurable(pickleable=True)
-class DClawTurnImageMultiGoal(DClawTurnImage):
+class DClawTurnImageMultiGoal(DClawTurnFixed):
     def __init__(self,
                  goal_image_pools,
-                 *args,
+                 *args,               
                  goal_completion_threshold: float = 0.15,
                  initial_goal_index: int = 1,
                  use_concatenated_goal: bool = True,
@@ -317,9 +317,8 @@ class DClawTurnImageMultiGoal(DClawTurnImage):
         assert self._goal_index >= 0 and self._goal_index < self.num_goals, \
             "Initial goal cannot be outside the range 0-{}".format(self.num_goals - 1)
 
-        # Initialize a goal
+        # Initialize goal params
         self._goal_image = self.sample_goal_image()
-
         self._goals = [np.pi, 0.]
         self._goal_completion_threshold = goal_completion_threshold
         self._use_concatenated_goal = use_concatenated_goal
@@ -351,15 +350,21 @@ class DClawTurnImageMultiGoal(DClawTurnImage):
             self._target_pos_range = (target, target)
             super()._reset()
 
-    def render(self):
-        width, height, _ = self.image_shape
-        img_obs = super().render(
-                width=width,
-                height=height,
-                camera_id=-1)
-        # Concatenated by the channels.
-        concatenated = np.concatenate([img_obs, self._goal_image], axis=2)
-        return concatenated
+    def render(self, mode='human', **kwargs):
+        if mode == 'human':
+            return super().render(mode=mode, **kwargs)
+        elif mode == 'rgb_array':
+            img_obs = super().render(
+                    mode=mode,
+                    **kwargs)
+            print(img_obs.shape)
+            # TODO: Move normalization into PixelObservationWrapper
+            normalized = ((2.0 / 255.0) * img_obs - 1.0)
+            # Concatenated by the channels.
+            concatenated = np.concatenate([normalized, self._goal_image], axis=2)
+            return concatenated
+        else:
+            raise NotImplementedError
 
     def reset(self):
         obs_dict = self.get_obs_dict()
@@ -372,6 +377,7 @@ class DClawTurnImageMultiGoal(DClawTurnImage):
             if object_target_angle_dist < self._goal_completion_threshold:
                 self.switch_goal()
         else:
+            # Sample new goal at every reset if multigoal with resets.
             self.switch_goal(random=True)
         self._reset()
         return self._get_obs(obs_dict)
@@ -408,8 +414,8 @@ class DClawTurnImageMultiGoal(DClawTurnImage):
         rand_img_idx = np.random.randint(0, goal_images.shape[0])
         return goal_images[rand_img_idx]
 
-@configurable(pickleable=True):
+@configurable(pickleable=True)
 class DClawTurnImageMultiGoalResetFree(DClawTurnImageMultiGoal):
     def __init__(self, *args, **kwargs):
-        super.__init__(*args, reset_free=True, **kwargs)
+        super().__init__(*args, reset_free=True, **kwargs)
 
