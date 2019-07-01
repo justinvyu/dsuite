@@ -308,10 +308,7 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
 
         self._set_target_object_qpos(self._sample_goal_qpos(obs_dict))
         return self._get_obs(self.get_obs_dict())
-        else:
-            self._set_target_object_qpos(self._get_goal_qpos(obs_dict))
-        return self._get_obs(self.get_obs_dict())
-
+        
 @configurable(pickleable=True)
 class DClawTurnFreeValve3Image(DClawTurnFreeValve3Fixed):
     """
@@ -330,7 +327,7 @@ class DClawTurnFreeValve3Image(DClawTurnFreeValve3Fixed):
         image = self.render(mode='rgb_array', \
                             width=width,
                             height=height,
-                            camera_id=1).reshape(-1)
+                            camera_id=-1).reshape(-1)
         obs['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
         return obs
 

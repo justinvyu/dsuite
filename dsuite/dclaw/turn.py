@@ -29,6 +29,7 @@ from dsuite.dclaw.base_env import (BaseDClawObjectEnv,
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance
+import pickle
 
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (
@@ -297,7 +298,7 @@ class DClawTurnImageResetFree(DClawTurnImage):
 @configurable(pickleable=True)
 class DClawTurnImageMultiGoal(DClawTurnFixed):
     def __init__(self,
-                 goal_image_pools,
+                 goal_image_pools_path,
                  *args,               
                  goal_completion_threshold: float = 0.15,
                  initial_goal_index: int = 1,
@@ -310,6 +311,8 @@ class DClawTurnImageMultiGoal(DClawTurnFixed):
         
         # `goal_image_pools` is an array of dicts, where each
         # index i corresponds to the ith set of goal images.
+        with open(goal_image_pools_path, 'rb') as file:
+            goal_image_pools = pickle.load(file)
         self._goal_image_pools = goal_image_pools
         self.num_goals = len(goal_image_pools)
         
@@ -357,7 +360,6 @@ class DClawTurnImageMultiGoal(DClawTurnFixed):
             img_obs = super().render(
                     mode=mode,
                     **kwargs)
-            print(img_obs.shape)
             # TODO: Move normalization into PixelObservationWrapper
             normalized = ((2.0 / 255.0) * img_obs - 1.0)
             # Concatenated by the channels.
@@ -376,6 +378,8 @@ class DClawTurnImageMultiGoal(DClawTurnFixed):
         if self._swap_goals_upon_completion:
             if object_target_angle_dist < self._goal_completion_threshold:
                 self.switch_goal()
+            else:
+                self.sample_goal_image()
         else:
             # Sample new goal at every reset if multigoal with resets.
             self.switch_goal(random=True)
