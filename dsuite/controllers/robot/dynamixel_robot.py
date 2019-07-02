@@ -97,9 +97,14 @@ class DynamixelRobotController(HardwareRobotController):
 
         return config
 
-    def set_motors_engaged(self, groups: Union[str, Sequence[str]],
+    def set_motors_engaged(self, groups: Union[str, Sequence[str], None],
                            engaged: bool):
         """Enables the motors in the given group name."""
+        # Interpret None as all motors.
+        if groups is None:
+            self._hardware.set_torque_enabled(self._all_motor_ids, engaged)
+            return
+
         if isinstance(groups, str):
             group_configs = [self.get_config(groups)]
         else:

@@ -15,7 +15,6 @@
 """Unit tests for BaseController."""
 
 import unittest
-from parameterized import parameterized
 
 from dsuite.controllers.base import BaseController
 from dsuite.utils.testing.mock_sim_scene import MockSimScene
@@ -49,26 +48,6 @@ class BaseControllerTest(unittest.TestCase):
         foo_state, bar_state = controller.get_state(['foo', 'bar'])
         self.assertEqual(foo_state, 0)
         self.assertEqual(bar_state, 0)
-
-    @parameterized.expand([
-        (3, 1, None, [0]),
-        (3, 1, 2, [0]),
-        (3, 3, None, [[0], [0], [0]]),
-    ])
-    def test_get_past_states(self, state_history_len, n, i, output):
-        """Add states to the history, checking length."""
-        controller = DummyController(
-            groups={'foo': {}}, state_history_len=state_history_len)
-        # State history should be initially empty
-        self.assertIsNotNone(controller._state_history)
-        self.assertEqual(len(controller._state_history), 0)
-        # Add items to the state history by calling get_state()
-        for _ in range(state_history_len + 2):
-            controller.get_state(['foo'])
-        self.assertEqual(len(controller._state_history), state_history_len)
-        # Get items from state history
-        history = controller.get_past_states(n, i)
-        self.assertEqual(history, output)
 
 
 if __name__ == '__main__':

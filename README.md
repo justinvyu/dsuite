@@ -15,7 +15,9 @@ environments.
 
 Simulation is performed by [MuJoCo](http://www.mujoco.org/). Communication with
 hardware is done through the
-[DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK).
+[DynamixelSDK](https://github.com/ROBOTIS-GIT/DynamixelSDK). For D'Kitty
+environments, external tracking is supported through
+[OpenVR](https://github.com/ValveSoftware/openvr) tracking.
 
 ```python
 import dsuite

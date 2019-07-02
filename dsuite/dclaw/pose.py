@@ -93,7 +93,8 @@ class BaseDClawPose(BaseDClawEnv, metaclass=abc.ABCMeta):
         reward_dict = collections.OrderedDict((
             ('pose_error_cost', -1 * np.linalg.norm(obs_dict['qpos_error'])),
             # Reward for low velocity.
-            ('joint_vel_cost', -0.1 * np.linalg.norm(qvel[qvel >= 4.5])),
+            ('joint_vel_cost',
+             -0.1 * np.linalg.norm(qvel[np.abs(qvel) >= 4.5])),
         ))
         return reward_dict
 

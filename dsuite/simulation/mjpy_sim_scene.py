@@ -14,6 +14,7 @@
 
 """Simulation using DeepMind Control Suite."""
 
+import logging
 import os
 from typing import Any
 
@@ -53,8 +54,8 @@ class MjPySimScene(SimScene):
 
     def copy_model(self) -> Any:
         """Returns a copy of the MjModel object."""
-        null_model = self._get_mjlib().PyMjModel()
-        model_copy = self._get_mjlib().mj_copyModel(null_model, self.model)
+        null_model = self.get_mjlib().PyMjModel()
+        model_copy = self.get_mjlib().mj_copyModel(null_model, self.model)
         return model_copy
 
     def save_binary(self, path: str) -> str:
@@ -65,12 +66,24 @@ class MjPySimScene(SimScene):
         """
         if not path.endswith('.mjb'):
             path = path + '.mjb'
-        self._get_mjlib().mj_saveModel(self.model.ptr, path.encode(), None, 0)
+        self.get_mjlib().mj_saveModel(self.model, path.encode(), None, 0)
         return path
 
-    def _get_mjlib(self) -> Any:
+    def upload_height_field(self, hfield_id: int):
+        """Uploads the height field to the rendering context."""
+        if not self.sim.render_contexts:
+            logging.warning('No rendering context; not uploading height field.')
+            return
+        self.get_mjlib().mjr_uploadHField(
+            self.model, self.sim.render_contexts[0].con, hfield_id)
+
+    def get_mjlib(self) -> Any:
         """Returns an interface to the low-level MuJoCo API."""
         return _MjlibWrapper(mujoco_py.cymj)
+
+    def get_handle(self, value: Any) -> Any:
+        """Returns a handle that can be passed to mjlib methods."""
+        return value
 
 
 class _MjlibWrapper:

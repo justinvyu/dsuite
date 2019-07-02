@@ -15,8 +15,10 @@
 """Simulation using DeepMind Control Suite."""
 
 import copy
+import functools
+import logging
 import os
-from typing import Any
+from typing import Any, Callable
 
 import dm_control.mujoco as dm_mujoco
 
@@ -75,9 +77,22 @@ class DMSimScene(SimScene):
         self.model.save_binary(path)
         return path
 
-    def _get_mjlib(self) -> Any:
+    def upload_height_field(self, hfield_id: int):
+        """Uploads the height field to the rendering context."""
+        if not self.sim.contexts:
+            logging.warning('No rendering context; not uploading height field.')
+            return
+        with self.sim.contexts.gl.make_current() as ctx:
+            ctx.call(self.get_mjlib().mjr_uploadHField, self.model.ptr,
+                     self.sim.contexts.mujoco.ptr, hfield_id)
+
+    def get_mjlib(self) -> Any:
         """Returns an interface to the low-level MuJoCo API."""
         return dm_mujoco.wrapper.mjbindings.mjlib
+
+    def get_handle(self, value: Any) -> Any:
+        """Returns a handle that can be passed to mjlib methods."""
+        return value.ptr
 
     def _patch_mjmodel_accessors(self, model):
         """Adds accessors to MjModel objects to support mujoco_py API.
@@ -87,7 +102,7 @@ class DMSimScene(SimScene):
 
         TODO(michaelahn): Deprecate this in favor of dm_control's named methods.
         """
-        mjlib = self._get_mjlib()
+        mjlib = self.get_mjlib()
 
         def name2id(type_name, name):
             obj_id = mjlib.mj_name2id(model.ptr,

@@ -141,7 +141,7 @@ def main():
         help=('The rendering mode. If provided, renders to a window. A render '
               'mode string can be passed here.'),
     )
-    env_id, params, args = parse_args(parser)
+    env_id, params, args = parse_env_args(parser)
 
     dsuite.set_env_params(env_id, params)
     env = gym.make(env_id)

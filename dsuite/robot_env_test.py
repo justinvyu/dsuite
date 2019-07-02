@@ -139,6 +139,11 @@ class RobotEnvTest(unittest.TestCase):
             return_value=collections.OrderedDict([('a', [1, 1])]))
         obs = test.reset()
 
+        self.assertDictEqual(test.last_obs_dict, {'a': [1, 1]})
+        self.assertIsNone(test.last_reward_dict)
+        self.assertIsNone(test.last_score_dict)
+        self.assertFalse(test.is_done)
+
         self.assertEqual(test._reset.call_count, 1)
         np.testing.assert_array_equal(obs, [1, 1])
 
@@ -172,6 +177,11 @@ class RobotEnvTest(unittest.TestCase):
         test.get_done = mock.Mock(return_value=np.array(False))
 
         obs, reward, done, info = test.step([0])
+
+        self.assertDictEqual(test.last_obs_dict, {'o1': [0], 'o2': [1, 2]})
+        self.assertDictEqual(test.last_reward_dict, {'r1': 1, 'r2': 2})
+        self.assertDictEqual(test.last_score_dict, {'s1': 1})
+        self.assertFalse(test.is_done)
 
         # Check that step calls its sub-methods exactly once.
         self.assertEqual(test.get_obs_dict.call_count, 1)

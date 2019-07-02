@@ -17,14 +17,12 @@
 This abstracts differences between a MuJoCo simulation and a hardware robot.
 """
 
-import logging
-from typing import Dict, Optional, Sequence, Tuple
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from dsuite.controllers.base import BaseController
 from dsuite.controllers.robot.config import ControlMode, RobotGroupConfig
-from dsuite.simulation.sim_scene import SimScene
 
 
 class RobotState:
@@ -49,24 +47,6 @@ class RobotState:
 
 class RobotController(BaseController):
     """Controller for reading sensor data and actuating robots."""
-
-    def __init__(self,
-                 sim_scene: SimScene,
-                 random_state: Optional[np.random.RandomState] = None,
-                 **kwargs):
-        """Initializes a RobotController.
-
-        Args:
-            sim_scene: The simulation to control.
-            random_state: A random state to use for applying observation noise.
-            **kwargs: Arguments to pass to BaseController.
-        """
-        super().__init__(sim_scene, **kwargs)
-        self.random_state = random_state
-
-        if self.random_state is None:
-            logging.info(
-                'Random state not given; observation noise will be ignored')
 
     @property
     def time(self) -> float:
@@ -138,6 +118,30 @@ class RobotController(BaseController):
 
         # Set all states at once.
         self._set_group_states(group_states, **kwargs)
+
+    def get_initial_state(
+            self,
+            groups: Union[str, Sequence[str]],
+    ) -> Union[RobotState, Sequence[RobotState]]:
+        """Returns the initial states for the given groups."""
+        if isinstance(groups, str):
+            configs = [self.get_config(groups)]
+        else:
+            configs = [self.get_config(name) for name in groups]
+        states = []
+        for config in configs:
+            state = RobotState()
+            # Return a blank state if this is a hardware-only group.
+            if config.qpos_indices is None:
+                states.append(state)
+                continue
+
+            state.qpos = self.sim_scene.init_qpos[config.qpos_indices].copy()
+            state.qvel = self.sim_scene.init_qvel[config.qvel_indices].copy()
+            states.append(state)
+        if isinstance(groups, str):
+            return states[0]
+        return states
 
     def _get_group_states(
             self, configs: Sequence[RobotGroupConfig]) -> Sequence[RobotState]:

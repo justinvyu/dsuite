@@ -12,9 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Import all robot submodules."""
-
-import dsuite.dclaw
-import dsuite.dkitty
-
-from dsuite.utils.configurable import set_env_params
+from .client import VrClient
