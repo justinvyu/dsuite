@@ -32,8 +32,12 @@ from dsuite.utils.circle_math import circle_distance
 import pickle
 
 try:
-    from sac_envs.utils import kinect_image_service
-    from sac_envs.utils import logitech_image_service
+    from dsuite.utils import kinect_image_service
+except ImportError:
+    pass
+
+try:
+    from dsuite.utils import logitech_image_service
 except ImportError:
     pass
 
