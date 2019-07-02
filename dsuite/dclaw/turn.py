@@ -24,8 +24,7 @@ from typing import Dict, Optional, Sequence
 import numpy as np
 from transforms3d.euler import euler2quat
 
-from dsuite.dclaw.base_env import (
-    BaseDClawObjectEnv, DEFAULT_CLAW_RESET_POSE)
+from dsuite.dclaw.base_env import BaseDClawObjectEnv
 from dsuite.simulation.randomize import SimRandomizer
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
@@ -341,7 +340,7 @@ class DClawTurnResetFree(DClawTurnFixed):
     def reset(self):
         obs_dict = self.get_obs_dict()
         for _ in range(15):
-            self._step(DEFAULT_CLAW_RESET_POSE)
+            self._step(RESET_POSE)
         self._reset()
         return self._get_obs(obs_dict)
 
@@ -361,7 +360,7 @@ class DClawTurnImageResetFree(DClawTurnImage):
     def reset(self):
         obs_dict = self.get_obs_dict()
         for _ in range(15):
-            self._step(DEFAULT_CLAW_RESET_POSE)
+            self._step(RESET_POSE)
         self._reset()
         return self._get_obs(obs_dict)
 
@@ -442,7 +441,7 @@ class DClawTurnImageMultiGoal(DClawTurnFixed):
         obs_dict = self.get_obs_dict()
         if self._reset_claw:
             for _ in range(15):
-                self._step(DEFAULT_CLAW_RESET_POSE)
+                self._step(RESET_POSE)
         # Check if the goal has been completed heuristically.
         object_target_angle_dist = obs_dict['object_to_target_angle_dist']
         if self._swap_goals_upon_completion:
