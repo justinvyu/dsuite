@@ -136,7 +136,8 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
              -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)
             ),
             # Penality for high velocities.
-            ('joint_vel_cost', -1 * np.linalg.norm(claw_vel[claw_vel >= 0.5])),
+            ('joint_vel_cost',
+             -1 * np.linalg.norm(claw_vel[np.abs(claw_vel) >= 0.5])),
 
             # Reward for close proximity with goal.
             ('bonus_small', 10 * (target_dist < 0.25)),
