@@ -31,6 +31,28 @@ from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance
 import pickle
 
+try:
+    from sac_envs.utils import kinect_image_service
+    from sac_envs.utils import logitech_image_service
+except ImportError:
+    pass
+
+
+IMAGE_SERVICE = None
+
+
+def get_image_service(*args, topic, **kwargs):
+    global IMAGE_SERVICE
+    if IMAGE_SERVICE is None:
+        print("CREATING NEW IMAGE_SERVICE")
+        # IMAGE_SERVICE = logitech_image_service.LogitechImageService(
+        #     *args, topic=topic, **kwargs)
+        IMAGE_SERVICE = kinect_image_service.KinectImageService(
+            *args, topic=topic, **kwargs)
+
+    return IMAGE_SERVICE
+
+
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (
     'claw_qpos',
@@ -51,6 +73,7 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
                  observation_keys: Sequence[str] = DEFAULT_OBSERVATION_KEYS,
                  device_path: Optional[str] = None,
                  frame_skip: int = 40,
+                 camera_config=None,
                  **kwargs):
         """Initializes the environment.
 
@@ -68,6 +91,9 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             frame_skip=frame_skip,
             **kwargs)
 
+        self._camera_config = camera_config
+        if self._camera_config is not None:
+            self.image_service = get_image_service(**camera_config)
         self._desired_claw_pos = DEFAULT_CLAW_RESET_POSE
         self._last_action = np.zeros(9)
 
@@ -168,6 +194,12 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         # Mark the target position in sim.
         self.model.body_quat[self._target_bid] = euler2quat(0, 0, target_pos)
 
+    def render(self, *args, **kwargs):
+        if self._camera_config is not None:
+            return self.image_service.get_image(*args, **kwargs)
+
+        return super(BaseDClawTurn, self).render(*args, **kwargs)
+
 
 @configurable(pickleable=True)
 class DClawTurnFixed(BaseDClawTurn):
@@ -213,8 +245,12 @@ class DClawTurnRandomResetSingleGoal(BaseDClawTurn):
     def __init__(self,
                  *args,
                  initial_object_pos_range=(-np.pi, np.pi),
+                 camera_config=None,
                  **kwargs):
         self._initial_object_pos_range = initial_object_pos_range
+        self._camera_config = camera_config
+        if self._camera_config is not None:
+            self.image_service = get_image_service(**camera_config)
         return super(DClawTurnRandomResetSingleGoal, self).__init__(
             *args, **kwargs)
 
@@ -239,28 +275,29 @@ class DClawTurnRandomDynamics(DClawTurnRandom):
         self._randomize_object_sim()
         super()._reset()
 
+
 @configurable(pickleable=True)
 class DClawTurnImage(DClawTurnFixed):
     """
     Observation including the image.
     """
 
-    def __init__(self, 
-                 image_shape: np.ndarray, 
-                 *args, 
-                 **kwargs):
+    def __init__(self,
+                 image_shape: np.ndarray,
+                 *args, **kwargs):
         self.image_shape = image_shape
         super().__init__(*args, **kwargs)
 
     def get_obs_dict(self) -> Dict[str, np.ndarray]:
         width, height = self.image_shape[:2]
         obs = super(DClawTurnImage, self).get_obs_dict()
-        image = self.render(mode='rgb_array', \
+        image = self.render(mode='rgb_array',
                             width=width,
                             height=height,
                             camera_id=-1).reshape(-1)
         obs['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
         return obs
+
 
 @configurable(pickleable=True)
 class DClawTurnResetFree(DClawTurnFixed):
@@ -275,6 +312,7 @@ class DClawTurnResetFree(DClawTurnFixed):
             self._step(DEFAULT_CLAW_RESET_POSE)
         self._reset()
         return self._get_obs(obs_dict)
+
 
 @configurable(pickleable=True)
 class DClawTurnImageResetFree(DClawTurnImage):
@@ -299,7 +337,7 @@ class DClawTurnImageResetFree(DClawTurnImage):
 class DClawTurnImageMultiGoal(DClawTurnFixed):
     def __init__(self,
                  goal_image_pools_path,
-                 *args,               
+                 *args,
                  goal_completion_threshold: float = 0.15,
                  initial_goal_index: int = 1,
                  use_concatenated_goal: bool = True,
@@ -308,14 +346,14 @@ class DClawTurnImageMultiGoal(DClawTurnFixed):
                  reset_free: bool = False,
                  **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # `goal_image_pools` is an array of dicts, where each
         # index i corresponds to the ith set of goal images.
         with open(goal_image_pools_path, 'rb') as file:
             goal_image_pools = pickle.load(file)
         self._goal_image_pools = goal_image_pools
         self.num_goals = len(goal_image_pools)
-        
+
         self._goal_index = initial_goal_index
         assert self._goal_index >= 0 and self._goal_index < self.num_goals, \
             "Initial goal cannot be outside the range 0-{}".format(self.num_goals - 1)
@@ -346,7 +384,7 @@ class DClawTurnImageMultiGoal(DClawTurnFixed):
         if self._reset_free:
             self._set_target_object_pos(self._goals[self._goal_index])
         else:
-            # If multigoal with resets, change the init 
+            # If multigoal with resets, change the init
             target = self._goals[self._goal_index]
             init = self._goals[1 - self._goal_index]
             self._init_object_pos_range = (init, init)
@@ -422,4 +460,3 @@ class DClawTurnImageMultiGoal(DClawTurnFixed):
 class DClawTurnImageMultiGoalResetFree(DClawTurnImageMultiGoal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, reset_free=True, **kwargs)
-
