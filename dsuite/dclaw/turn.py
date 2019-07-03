@@ -365,7 +365,7 @@ class DClawTurnImageResetFree(DClawTurnImage):
         return self._get_obs(obs_dict)
 
 @configurable(pickleable=True)
-class DClawTurnImageMultiGoal(DClawTurnFixed):
+class DClawTurnMultiGoal(DClawTurnFixed):
     def __init__(self,
                  goal_image_pools_path,
                  *args,
@@ -488,6 +488,6 @@ class DClawTurnImageMultiGoal(DClawTurnFixed):
         return goal_images[rand_img_idx]
 
 @configurable(pickleable=True)
-class DClawTurnImageMultiGoalResetFree(DClawTurnImageMultiGoal):
+class DClawTurnMultiGoalResetFree(DClawTurnMultiGoal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, reset_free=True, **kwargs)

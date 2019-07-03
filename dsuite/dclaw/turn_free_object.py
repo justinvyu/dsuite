@@ -215,7 +215,7 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
         self._init_x_pos_range = init_x_pos_range
         self._init_y_pos_range = init_y_pos_range
         super().__init__(*args, **kwargs)
-    
+
     def _reset(self):
         lows, highs = list(zip(self._init_angle_range,
                                self._target_angle_range,
@@ -308,7 +308,7 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
 
         self._set_target_object_qpos(self._sample_goal_qpos(obs_dict))
         return self._get_obs(self.get_obs_dict())
-        
+
 @configurable(pickleable=True)
 class DClawTurnFreeValve3Image(DClawTurnFreeValve3Fixed):
     """
