@@ -366,38 +366,64 @@ class DClawTurnImageResetFree(DClawTurnImage):
 
 @configurable(pickleable=True)
 class DClawTurnMultiGoal(DClawTurnFixed):
+    """
+    :param: goals
+        This is a list of the goal angles.
+
+    ...
+
+    :param use_concatenated_goal
+        If this is True, the rendered image will contain a sampled goal
+        image concatenated by the channel.
+        If False, the rendered image will just be the current obs image
+        and there will be no `_goal_image` sampled from a goal pool.
+    :param swap_goals_upon_completion
+        If this is True, the goal will be switched only when it is reached.
+        If False, the goal will be switched randomly at every.
+    """
+    # TODO: Finish the param specification above.
+
     def __init__(self,
-                 goal_image_pools_path,
+                 goals,
                  *args,
+                 goal_image_pools_path: str = None,
                  goal_completion_threshold: float = 0.15,
-                 initial_goal_index: int = 1,
-                 use_concatenated_goal: bool = True,
+                 initial_goal_index: int = 0,
+                 use_concatenated_goal: bool = False,
                  swap_goals_upon_completion: bool = True,
                  reset_claw: bool = True,
                  reset_free: bool = False,
+                 observation_keys = DEFAULT_OBSERVATION_KEYS + ('goal_index',),
                  **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, observation_keys=observation_keys, **kwargs)
 
-        # `goal_image_pools` is an array of dicts, where each
-        # index i corresponds to the ith set of goal images.
-        with open(goal_image_pools_path, 'rb') as file:
-            goal_image_pools = pickle.load(file)
-        self._goal_image_pools = goal_image_pools
-        self.num_goals = len(goal_image_pools)
+        self._goals = goals
+        if goal_image_pools_path is None:
+            assert not use_concatenated_goal, 'Cannot use concatenated' \
+               + ' observation images without goal pools'
+        else:
+            # `goal_image_pools` is an array of dicts, where each
+            # index i corresponds to the ith set of goal images.
+            with open(goal_image_pools_path, 'rb') as file:
+                goal_image_pools = pickle.load(file)
+            self._goal_image_pools = goal_image_pools
 
+        self._num_goals = len(goals)
         self._goal_index = initial_goal_index
-        assert self._goal_index >= 0 and self._goal_index < self.num_goals, \
-            "Initial goal cannot be outside the range 0-{}".format(self.num_goals - 1)
+        assert self._goal_index >= 0 and self._goal_index < self._num_goals, \
+           "Initial goal cannot be outside the range 0-{}".format(self._num_goals - 1)
 
         # Initialize goal params
-        self._goal_image = self.sample_goal_image()
-        self._goals = [np.pi, 0.]
         self._goal_completion_threshold = goal_completion_threshold
         self._use_concatenated_goal = use_concatenated_goal
         self._swap_goals_upon_completion = swap_goals_upon_completion
+        if self._use_concatenated_goal:
+            self._goal_image = self.sample_goal_image()
 
         self._reset_claw = reset_claw
         self._reset_free = reset_free
+        # reset to the _init_object_pos_range on the first reset
+        self._initial_reset = False
         self._reset()
 
         self._num_goal_switches = 0
@@ -406,13 +432,14 @@ class DClawTurnMultiGoal(DClawTurnFixed):
         obs_dict = super().get_obs_dict()
 
          # Log some other metrics with multigoal
-        obs_dict['num_goal_switches'] = self._num_goal_switches
-        obs_dict['current_goal'] = self._goal_index
+        obs_dict['num_goal_switches'] = np.array([self._num_goal_switches])
+        obs_dict['goal_index'] = np.array([self._goal_index])
 
         return obs_dict
 
     def _reset(self):
-        if self._reset_free:
+        if self._reset_free and not self._initial_reset:
+            self._initial_reset = True
             self._set_target_object_pos(self._goals[self._goal_index])
         else:
             # If multigoal with resets, change the init
@@ -431,9 +458,10 @@ class DClawTurnMultiGoal(DClawTurnFixed):
                     **kwargs)
             # TODO: Move normalization into PixelObservationWrapper
             normalized = ((2.0 / 255.0) * img_obs - 1.0)
-            # Concatenated by the channels.
-            concatenated = np.concatenate([normalized, self._goal_image], axis=2)
-            return concatenated
+            if self._use_concatenated_goal:
+                # Concatenated by the channels.
+                normalized = np.concatenate([normalized, self._goal_image], axis=2)
+            return normalized
         else:
             raise NotImplementedError
 
@@ -447,8 +475,8 @@ class DClawTurnMultiGoal(DClawTurnFixed):
         if self._swap_goals_upon_completion:
             if object_target_angle_dist < self._goal_completion_threshold:
                 self.switch_goal()
-            else:
-                self.sample_goal_image()
+            # else:
+            #     self.sample_goal_image()
         else:
             # Sample new goal at every reset if multigoal with resets.
             self.switch_goal(random=True)
@@ -466,14 +494,15 @@ class DClawTurnMultiGoal(DClawTurnFixed):
 
     def set_goal(self):
         self._set_target_object_pos(self._goals[self._goal_index])
-        self._goal_image = self.sample_goal_image()
+        if self._use_concatenated_goal:
+            self._goal_image = self.sample_goal_image()
 
     def switch_goal(self, random=False):
         # For now, just increment by one and mod by # of goals.
         if random:
-            self._goal_index = np.random.randint(low=0, high=self.num_goals)
+            self._goal_index = np.random.randint(low=0, high=self._num_goals)
         else:
-            self._goal_index = np.mod(self._goal_index + 1, self.num_goals)
+            self._goal_index = np.mod(self._goal_index + 1, self._num_goals)
         self._num_goal_switches += 1
         self.set_goal()
 
