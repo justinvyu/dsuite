@@ -67,7 +67,7 @@ DEFAULT_OBSERVATION_KEYS = (
 )
 
 # Reset pose for the claw joints.
-RESET_POSE = [0, -np.pi / 3, np.pi / 3] * 3
+RESET_POSE = np.array([0, -np.pi / 3, np.pi / 3] * 3)
 
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_v0.xml'
 
@@ -315,19 +315,23 @@ class DClawTurnImage(DClawTurnFixed):
 
     def __init__(self,
                  image_shape: np.ndarray,
+                 goal_completion_threshold: bool = 0.15,
                  *args, **kwargs):
-        self.image_shape = image_shape
+        self._image_shape = image_shape
+        self._goal_completion_threshold = goal_completion_threshold
         super().__init__(*args, **kwargs)
 
     def get_obs_dict(self) -> Dict[str, np.ndarray]:
-        width, height = self.image_shape[:2]
-        obs = super(DClawTurnImage, self).get_obs_dict()
+        width, height = self._image_shape[:2]
+        obs_dict = super(DClawTurnImage, self).get_obs_dict()
         image = self.render(mode='rgb_array',
                             width=width,
                             height=height,
                             camera_id=-1).reshape(-1)
-        obs['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
-        return obs
+        obs_dict['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
+        angle_dist = obs_dict['object_to_target_angle_dist']
+        obs_dict['is_goal'] = angle_dist < self._goal_completion_threshold
+        return obs_dict
 
 
 @configurable(pickleable=True)
@@ -394,6 +398,7 @@ class DClawTurnMultiGoal(DClawTurnFixed):
                  reset_claw: bool = True,
                  reset_free: bool = False,
                  observation_keys = DEFAULT_OBSERVATION_KEYS + ('goal_index',),
+                 goal_collection: bool = False,
                  **kwargs):
         super().__init__(*args, observation_keys=observation_keys, **kwargs)
 
@@ -424,6 +429,7 @@ class DClawTurnMultiGoal(DClawTurnFixed):
         self._reset_free = reset_free
         # reset to the _init_object_pos_range on the first reset
         self._initial_reset = False
+        self._goal_collection = goal_collection
         self._reset()
 
         self._num_goal_switches = 0
@@ -438,10 +444,12 @@ class DClawTurnMultiGoal(DClawTurnFixed):
         return obs_dict
 
     def _reset(self):
-        if self._reset_free and not self._initial_reset:
-            self._initial_reset = True
+        if self._goal_collection:
+            super()._reset()
+        elif self._reset_free and self._initial_reset:
             self._set_target_object_pos(self._goals[self._goal_index])
         else:
+            self._initial_reset = True
             # If multigoal with resets, change the init
             target = self._goals[self._goal_index]
             init = self._goals[1 - self._goal_index]
