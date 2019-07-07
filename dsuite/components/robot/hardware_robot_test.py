@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for RobotController and RobotGroupConfig."""
+"""Unit tests for RobotComponent and RobotGroupConfig."""
 
 import unittest
 
 import numpy as np
 
-from dsuite.controllers.robot import HardwareRobotController, RobotState
+from dsuite.components.robot import HardwareRobotComponent, RobotState
 from dsuite.utils.testing.mock_sim_scene import MockSimScene
 from dsuite.utils.testing.mock_time import patch_time
 
 
-class DummyHardwareRobotController(HardwareRobotController):
-    """Test implementation of HardwareRobotController."""
+class DummyHardwareRobotComponent(HardwareRobotComponent):
+    """Test implementation of HardwareRobotComponent."""
 
     def calibrate_state(self, state: RobotState, group_name: str):
         self._calibrate_state(state, self.get_config(group_name))
@@ -36,12 +36,12 @@ class DummyHardwareRobotController(HardwareRobotController):
         self._synchronize_timestep()
 
 
-class HardwareRobotControllerTest(unittest.TestCase):
-    """Unit test class for HardwareRobotController."""
+class HardwareRobotComponentTest(unittest.TestCase):
+    """Unit test class for HardwareRobotComponent."""
 
     def test_calibrate_state(self):
-        """Converts a state to controller space."""
-        robot = DummyHardwareRobotController(
+        """Converts a state to component space."""
+        robot = DummyHardwareRobotComponent(
             MockSimScene(nq=1),
             groups={
                 'a': {
@@ -56,8 +56,8 @@ class HardwareRobotControllerTest(unittest.TestCase):
         np.testing.assert_allclose(state.qvel, [0.5, -1, 1])
 
     def test_decalibrate_qpos(self):
-        """Converts a controller state qpos to hardware space."""
-        robot = DummyHardwareRobotController(
+        """Converts a component state qpos to hardware space."""
+        robot = DummyHardwareRobotComponent(
             MockSimScene(nq=1),
             groups={
                 'a': {
@@ -71,9 +71,9 @@ class HardwareRobotControllerTest(unittest.TestCase):
     def test_timestep(self):
         """Tests advancement of time when doing timesteps."""
         with patch_time(
-                'dsuite.controllers.robot.hardware_robot.time',
+                'dsuite.components.robot.hardware_robot.time',
                 initial_time=0) as mock_time:
-            robot = DummyHardwareRobotController(
+            robot = DummyHardwareRobotComponent(
                 MockSimScene(nq=1, step_duration=0.5), groups={})
 
             self.assertEqual(robot.time, 0)

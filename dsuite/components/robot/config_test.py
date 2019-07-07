@@ -18,7 +18,7 @@ import unittest
 
 import numpy as np
 
-from dsuite.controllers.robot.config import RobotGroupConfig
+from dsuite.components.robot.config import RobotGroupConfig
 from dsuite.utils.testing.mock_sim_scene import MockSimScene
 
 

@@ -12,26 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Implementation of HardwareRobotController using the DynamixelSDK."""
+"""Implementation of HardwareRobotComponent using the DynamixelSDK."""
 
 from typing import Dict, Iterable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from dsuite.controllers.robot import HardwareRobotController, RobotState
-from dsuite.controllers.robot.dynamixel_client import DynamixelClient
-from dsuite.controllers.robot.hardware_robot import HardwareRobotGroupConfig
-from dsuite.controllers.robot.config import ControlMode
+from dsuite.components.robot import HardwareRobotComponent, RobotState
+from dsuite.components.robot.dynamixel_client import DynamixelClient
+from dsuite.components.robot.hardware_robot import HardwareRobotGroupConfig
+from dsuite.components.robot.config import ControlMode
+
+
+class DynamixelRobotState(RobotState):
+    """Data class that represents the state of a Dynamixel robot."""
+
+    def __init__(self, *args, current: Optional[np.ndarray] = None, **kwargs):
+        """Initializes a new state object.
+
+        Args:
+            current: The present current reading for the motors, in mA.
+        """
+        super().__init__(*args, **kwargs)
+        self.current = current
 
 
 class DynamixelGroupConfig(HardwareRobotGroupConfig):
-    """Stores group configuration for a DynamixelRobotController."""
+    """Stores group configuration for a DynamixelRobotComponent."""
 
     def __init__(self,
                  *args,
                  motor_ids: Optional[Iterable[int]] = None,
                  **kwargs):
-        """Initializes a new configuration for a HardwareRobotController group.
+        """Initializes a new configuration for a HardwareRobotComponent group.
 
         Args:
             motor_ids: The Dynamixel motor identifiers to associate with this
@@ -58,15 +71,15 @@ class DynamixelGroupConfig(HardwareRobotGroupConfig):
         self.motor_id_indices = np.searchsorted(all_motor_ids, self.motor_ids)
 
 
-class DynamixelRobotController(HardwareRobotController):
-    """Controller for hardware robots using Dynamixel motors."""
+class DynamixelRobotComponent(HardwareRobotComponent):
+    """Component for hardware robots using Dynamixel motors."""
 
     # Cache dynamixel_py instances by device path.
     DEVICE_CLIENTS = {}
 
     def __init__(self, *args, groups: Dict[str, Dict], device_path: str,
                  **kwargs):
-        """Initializes the controller.
+        """Initializes the component.
 
         Args:
             groups: Group configurations for reading/writing state.
@@ -121,15 +134,15 @@ class DynamixelRobotController(HardwareRobotController):
     def _get_group_states(
             self,
             configs: Sequence[DynamixelGroupConfig],
-    ) -> Sequence[RobotState]:
+    ) -> Sequence[DynamixelRobotState]:
         """Returns the states for the given group configurations."""
         # Make one call to the hardware to get all of the positions/velocities,
         # and extract each individual groups' subset from them.
-        all_qpos, all_qvel = self._hardware.read_pos_vel()
+        all_qpos, all_qvel, all_cur = self._hardware.read_pos_vel_cur()
 
         states = []
         for config in configs:
-            state = RobotState()
+            state = DynamixelRobotState()
             # Return a blank state if this is a sim-only group.
             if config.motor_ids is None:
                 states.append(state)
@@ -137,6 +150,7 @@ class DynamixelRobotController(HardwareRobotController):
 
             state.qpos = all_qpos[config.motor_id_indices]
             state.qvel = all_qvel[config.motor_id_indices]
+            state.current = all_cur[config.motor_id_indices]
 
             self._calibrate_state(state, config)
 
@@ -148,12 +162,14 @@ class DynamixelRobotController(HardwareRobotController):
     def _set_group_states(
             self,
             group_states: Sequence[Tuple[DynamixelGroupConfig, RobotState]],
-            block: bool = True):
+            block: bool = True,
+            **block_kwargs):
         """Sets the robot joints to the given states.
 
         Args:
             group_states: The states to set for each group.
             block: If True, blocks the current thread until completion.
+            **block_kwargs: Arguments to pass to `_wait_for_desired_states`.
         """
         # Filter out sim-only groups.
         group_states = [
@@ -167,7 +183,7 @@ class DynamixelRobotController(HardwareRobotController):
 
         # Block until we've reached the given states.
         if block:
-            self._wait_for_desired_states(group_states)
+            self._wait_for_desired_states(group_states, **block_kwargs)
 
         # Reset the step time.
         self.reset_time()

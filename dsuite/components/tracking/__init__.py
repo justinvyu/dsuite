@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Robot controller module."""
+"""Tracking component module."""
 
-from .robot import ControlMode, RobotController, RobotState
-from .hardware_robot import HardwareRobotController
-from .dynamixel_robot import DynamixelRobotController
+from .tracker import TrackerComponent, TrackerState
+from .vr_tracker import VrTrackerComponent

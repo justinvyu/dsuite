@@ -12,25 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for RobotController and RobotGroupConfig."""
+"""Unit tests for RobotComponent and RobotGroupConfig."""
 
 import unittest
 
 import numpy as np
 
-from dsuite.controllers.robot import ControlMode, RobotController
+from dsuite.components.robot import ControlMode, RobotComponent
 from dsuite.utils.testing.mock_sim_scene import MockSimScene
 
 
-class RobotControllerTest(unittest.TestCase):
-    """Unit test class for RobotController."""
+class RobotComponentTest(unittest.TestCase):
+    """Unit test class for RobotComponent."""
 
     def test_get_state(self):
         """Tests querying the state of multiple groups."""
         sim_scene = MockSimScene(nq=10)
         sim_scene.data.qpos[:] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         sim_scene.data.qvel[:] = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-        robot = RobotController(
+        robot = RobotComponent(
             sim_scene,
             groups={
                 'a': {
@@ -50,7 +50,7 @@ class RobotControllerTest(unittest.TestCase):
     def test_step(self):
         """Tests stepping with an action for multiple groups."""
         sim_scene = MockSimScene(nq=10, ctrl_range=[-1, 1])
-        robot = RobotController(
+        robot = RobotComponent(
             sim_scene,
             groups={
                 'a': {
@@ -72,7 +72,7 @@ class RobotControllerTest(unittest.TestCase):
     def test_step_denormalize(self):
         """Tests denormalizing the actions to the sim control range."""
         sim_scene = MockSimScene(nq=5, ctrl_range=[0, 10])
-        robot = RobotController(
+        robot = RobotComponent(
             sim_scene, groups={'a': {
                 'qpos_indices': [0, 1, 2, 3, 4],
             }})
@@ -85,7 +85,7 @@ class RobotControllerTest(unittest.TestCase):
         """Tests action clamping when doing position control."""
         sim_scene = MockSimScene(nq=5, ctrl_range=[-1, 1])
         sim_scene.data.qpos[:] = [-0.4, -0.2, 0, 0.2, 0.4]
-        robot = RobotController(
+        robot = RobotComponent(
             sim_scene,
             groups={
                 'a': {
@@ -101,7 +101,7 @@ class RobotControllerTest(unittest.TestCase):
     def test_step_velocity_control_bounds(self):
         """Tests action clamping when doing velocity control."""
         sim_scene = MockSimScene(nq=3, ctrl_range=[-10, 10])
-        robot = RobotController(
+        robot = RobotComponent(
             sim_scene,
             groups={
                 'a': {

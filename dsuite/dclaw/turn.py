@@ -24,6 +24,7 @@ from typing import Dict, Optional, Sequence
 import numpy as np
 from transforms3d.euler import euler2quat
 
+from dsuite.components.robot.dynamixel_robot import DynamixelRobotState
 from dsuite.dclaw.base_env import BaseDClawObjectEnv
 from dsuite.simulation.randomize import SimRandomizer
 from dsuite.utils.configurable import configurable
@@ -42,6 +43,14 @@ DEFAULT_OBSERVATION_KEYS = (
 RESET_POSE = [0, -np.pi / 3, np.pi / 3] * 3
 
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_v0.xml'
+
+# Threshold near the joint limits at which we consider to be unsafe.
+SAFETY_POS_THRESHOLD = 5 * np.pi / 180  # 5 degrees
+
+SAFETY_VEL_THRESHOLD = 1.0  # 1rad/s
+
+# Current threshold above which we consider as unsafe.
+SAFETY_CURRENT_THRESHOLD = 200  # mA
 
 
 class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
@@ -109,7 +118,7 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         target_error = self._target_object_pos - object_state.qpos
         target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
 
-        return collections.OrderedDict((
+        obs_dict = collections.OrderedDict((
             ('claw_qpos', claw_state.qpos),
             ('claw_qvel', claw_state.qvel),
             ('object_x', np.cos(object_state.qpos)),
@@ -118,6 +127,12 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             ('last_action', self._last_action),
             ('target_error', target_error),
         ))
+
+        # Add hardware-specific state if present.
+        if isinstance(claw_state, DynamixelRobotState):
+            obs_dict['claw_current'] = claw_state.current
+
+        return obs_dict
 
     def get_reward_dict(
             self,
@@ -151,10 +166,33 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             reward_dict: Dict[str, np.ndarray],
     ) -> Dict[str, np.ndarray]:
         """Returns a standardized measure of success for the environment."""
-        return collections.OrderedDict((
+        qpos = obs_dict['claw_qpos']
+        # Calculate if the claw positions are near the edges of the joint range.
+        qpos_range = self.robot.get_config('dclaw').qpos_range
+        near_lower_limit = (
+            np.abs(qpos_range[:, 0] - qpos) < SAFETY_POS_THRESHOLD)
+        near_upper_limit = (
+            np.abs(qpos_range[:, 1] - qpos) < SAFETY_POS_THRESHOLD)
+        near_pos_limit = np.sum(near_lower_limit | near_upper_limit, axis=1)
+
+        above_vel_limit = np.sum(
+            np.abs(obs_dict['claw_qvel']) > SAFETY_VEL_THRESHOLD, axis=1)
+
+        score_dict = collections.OrderedDict((
             ('points', 1.0 - np.abs(obs_dict['target_error']) / np.pi),
             ('success', reward_dict['bonus_big'] > 0.0),
+            ('safety_pos_violation', near_pos_limit),
+            ('safety_vel_violation', above_vel_limit),
         ))
+
+        # Add hardware-specific scores.
+        if 'claw_current' in obs_dict:
+            above_current_limit = (
+                np.abs(obs_dict['claw_current']) > SAFETY_CURRENT_THRESHOLD)
+            score_dict['safety_current_violation'] = np.sum(
+                above_current_limit, axis=1)
+
+        return score_dict
 
     def _set_target_object_pos(self, target_pos: float):
         """Sets the goal angle to the given position."""
@@ -206,6 +244,23 @@ class DClawTurnRandomDynamics(DClawTurnRandom):
             self.robot.get_config('object').qvel_indices.tolist())
 
     def _reset(self):
+        # Randomize joint dynamics.
+        self._randomizer.randomize_dofs(
+            self._dof_indices,
+            damping_range=(0.005, 0.1),
+            friction_loss_range=(0.001, 0.005),
+        )
+        self._randomizer.randomize_actuators(
+            all_same=True,
+            kp_range=(1, 3),
+        )
+        # Randomize friction on all geoms in the scene.
+        self._randomizer.randomize_geoms(
+            all_same=True,
+            friction_slide_range=(0.8, 1.2),
+            friction_spin_range=(0.003, 0.007),
+            friction_roll_range=(0.00005, 0.00015),
+        )
         self._randomizer.randomize_bodies(
             ['mount'],
             position_perturb_range=(-0.01, 0.01),
@@ -218,10 +273,5 @@ class DClawTurnRandomDynamics(DClawTurnRandom):
             parent_body_names=['valve'],
             color_range=(0.2, 0.9),
             size_perturb_range=(-0.003, 0.003),
-        )
-        self._randomizer.randomize_dofs(
-            self._dof_indices,
-            damping_range=(0.1, 0.5),
-            friction_loss_range=(0.001, 0.005),
         )
         super()._reset()

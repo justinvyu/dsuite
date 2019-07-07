@@ -28,17 +28,20 @@ ADDR_TORQUE_ENABLE = 64
 ADDR_GOAL_POSITION = 116
 ADDR_PRESENT_POSITION = 132
 ADDR_PRESENT_VELOCITY = 128
-ADDR_PRESENT_POS_VEL = 128
+ADDR_PRESENT_CURRENT = 126
+ADDR_PRESENT_POS_VEL_CUR = 126
 
 # Data Byte Length
 LEN_PRESENT_POSITION = 4
 LEN_PRESENT_VELOCITY = 4
-LEN_PRESENT_POS_VEL = 8
+LEN_PRESENT_CURRENT = 2
+LEN_PRESENT_POS_VEL_CUR = 10
 LEN_GOAL_POSITION = 4
 
 DEFAULT_POS_SCALE = 2.0 * np.pi / 4096  # 0.088 degrees
 # See http://emanual.robotis.com/docs/en/dxl/x/xh430-v210/#goal-velocity
 DEFAULT_VEL_SCALE = 0.229 * 2.0 * np.pi / 60.0  # 0.229 rpm
+DEFAULT_CUR_SCALE = 1.34
 
 
 def dynamixel_cleanup_handler():
@@ -66,7 +69,8 @@ class DynamixelClient:
                  baudrate: int = 1000000,
                  lazy_connect: bool = False,
                  pos_scale: Optional[float] = None,
-                 vel_scale: Optional[float] = None):
+                 vel_scale: Optional[float] = None,
+                 cur_scale: Optional[float] = None):
         """Initializes a new client.
 
         Args:
@@ -82,6 +86,8 @@ class DynamixelClient:
                 motor-dependent. If not provided, uses the default scale.
             vel_scale: The scaling factor for the velocities. This is
                 motor-dependent. If not provided uses the default scale.
+            cur_scale: The scaling factor for the currents. This is
+                motor-dependent. If not provided uses the default scale.
         """
         import dynamixel_sdk
         self.dxl = dynamixel_sdk
@@ -94,11 +100,13 @@ class DynamixelClient:
         self.port_handler = self.dxl.PortHandler(port)
         self.packet_handler = self.dxl.PacketHandler(PROTOCOL_VERSION)
 
-        self._pos_vel_reader = DynamixelPosVelReader(
+        self._pos_vel_cur_reader = DynamixelPosVelCurReader(
             self,
             self.motor_ids,
             pos_scale=pos_scale if pos_scale is not None else DEFAULT_POS_SCALE,
-            vel_scale=vel_scale if vel_scale is not None else DEFAULT_VEL_SCALE)
+            vel_scale=vel_scale if vel_scale is not None else DEFAULT_VEL_SCALE,
+            cur_scale=cur_scale if cur_scale is not None else DEFAULT_CUR_SCALE,
+        )
         self._sync_writers = {}
 
         self.OPEN_CLIENTS.add(self)
@@ -174,9 +182,9 @@ class DynamixelClient:
             time.sleep(retry_interval)
             retries -= 1
 
-    def read_pos_vel(self) -> Tuple[np.ndarray, np.ndarray]:
+    def read_pos_vel_cur(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Returns the current positions and velocities."""
-        return self._pos_vel_reader.read()
+        return self._pos_vel_cur_reader.read()
 
     def write_desired_pos(self, motor_ids: Iterable[int],
                           positions: np.ndarray):
@@ -191,7 +199,7 @@ class DynamixelClient:
         positions = np.clip(positions, 0, 2.0 * np.pi - 1e-5)
 
         # Convert to Dynamixel position space.
-        positions = positions / self._pos_vel_reader.pos_scale
+        positions = positions / self._pos_vel_cur_reader.pos_scale
         self.sync_write(motor_ids, positions, ADDR_GOAL_POSITION,
                         LEN_GOAL_POSITION)
 
@@ -369,36 +377,43 @@ class DynamixelReader:
         return self._data.copy()
 
 
-class DynamixelPosVelReader(DynamixelReader):
+class DynamixelPosVelCurReader(DynamixelReader):
     """Reads positions and velocities."""
 
     def __init__(self,
                  client: DynamixelClient,
                  motor_ids: Iterable[int],
                  pos_scale: float = 1.0,
-                 vel_scale: float = 1.0):
+                 vel_scale: float = 1.0,
+                 cur_scale: float = 1.0):
         super().__init__(
             client,
             motor_ids,
-            address=ADDR_PRESENT_POS_VEL,
-            size=LEN_PRESENT_POS_VEL,
+            address=ADDR_PRESENT_POS_VEL_CUR,
+            size=LEN_PRESENT_POS_VEL_CUR,
         )
         self.pos_scale = pos_scale
         self.vel_scale = vel_scale
+        self.cur_scale = cur_scale
 
     def _initialize_data(self):
         """Initializes the cached data."""
         self._pos_data = np.zeros(len(self.motor_ids), dtype=np.float32)
         self._vel_data = np.zeros(len(self.motor_ids), dtype=np.float32)
+        self._cur_data = np.zeros(len(self.motor_ids), dtype=np.float32)
 
     def _update_data(self, index: int, motor_id: int):
         """Updates the data index for the given motor ID."""
+        cur = self.operation.getData(motor_id, ADDR_PRESENT_CURRENT,
+                                     LEN_PRESENT_CURRENT)
         vel = self.operation.getData(motor_id, ADDR_PRESENT_VELOCITY,
                                      LEN_PRESENT_VELOCITY)
         pos = self.operation.getData(motor_id, ADDR_PRESENT_POSITION,
                                      LEN_PRESENT_POSITION)
 
         # Flip to negative if the sign bit is on.
+        if (cur & (1 << 15)) != 0:
+            cur = -((1 << 16) - cur)
         if (vel & (1 << 31)) != 0:
             vel = -((1 << 32) - vel)
         if (pos & (1 << 31)) != 0:
@@ -406,10 +421,12 @@ class DynamixelPosVelReader(DynamixelReader):
 
         self._pos_data[index] = float(pos) * self.pos_scale
         self._vel_data[index] = float(vel) * self.vel_scale
+        self._cur_data[index] = float(cur) * self.cur_scale
 
     def _get_data(self):
         """Returns a copy of the data."""
-        return self._pos_data.copy(), self._vel_data.copy()
+        return (self._pos_data.copy(), self._vel_data.copy(),
+                self._cur_data.copy())
 
 
 # Register global cleanup function.
@@ -446,9 +463,10 @@ if __name__ == '__main__':
                 print('Writing: {}'.format(way_point.tolist()))
                 dxl_client.write_desired_pos(motors, way_point)
             read_start = time.time()
-            cur_pos, cur_vel = dxl_client.read_pos_vel()
+            pos_now, vel_now, cur_now = dxl_client.read_pos_vel_cur()
             if step % 5 == 0:
                 print('[{}] Frequency: {:.2f} Hz'.format(
                     step, 1.0 / (time.time() - read_start)))
-                print('> Pos: {}'.format(cur_pos.tolist()))
-                print('> Vel: {}'.format(cur_vel.tolist()))
+                print('> Pos: {}'.format(pos_now.tolist()))
+                print('> Vel: {}'.format(vel_now.tolist()))
+                print('> Cur: {}'.format(cur_now.tolist()))

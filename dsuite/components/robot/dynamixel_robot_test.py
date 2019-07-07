@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for RobotController and RobotGroupConfig."""
+"""Unit tests for RobotComponent and RobotGroupConfig."""
 
 import unittest
 from unittest import mock
@@ -20,7 +20,7 @@ from typing import Sequence
 
 import numpy as np
 
-from dsuite.controllers.robot import (DynamixelRobotController, RobotState)
+from dsuite.components.robot import (DynamixelRobotComponent, RobotState)
 from dsuite.utils.testing.mock_sim_scene import MockSimScene
 from dsuite.utils.testing.mock_time import patch_time
 
@@ -32,6 +32,7 @@ class MockDynamixelClient:
         self.motor_ids = np.array(sorted(all_motor_ids), dtype=int)
         self.qpos = np.zeros_like(self.motor_ids, dtype=np.float32)
         self.qvel = np.zeros_like(self.motor_ids, dtype=np.float32)
+        self.current = np.zeros_like(self.motor_ids, dtype=np.float32)
         self.enabled = np.zeros_like(self.motor_ids, dtype=bool)
         self.is_connected = True
 
@@ -40,9 +41,9 @@ class MockDynamixelClient:
         indices = np.searchsorted(self.motor_ids, motor_ids)
         self.enabled[indices] = enabled
 
-    def read_pos_vel(self):
+    def read_pos_vel_cur(self):
         assert self.is_connected
-        return self.qpos, self.qvel
+        return self.qpos, self.qvel, self.current
 
     def write_desired_pos(self, motor_ids: Sequence[int],
                           qpos: Sequence[float]):
@@ -55,23 +56,23 @@ def patch_dynamixel(test_fn):
     """Decorator to patch dynamixel_py with a mock."""
 
     def patched_fn(self):
-        DynamixelRobotController.DEVICE_CLIENTS.clear()
+        DynamixelRobotComponent.DEVICE_CLIENTS.clear()
         with mock.patch(
-                'dsuite.controllers.robot.dynamixel_client.DynamixelClient',
+                'dsuite.components.robot.dynamixel_robot.DynamixelClient',
                 new=MockDynamixelClient):
             test_fn(self)
 
     return patched_fn
 
 
-class RobotControllerTest(unittest.TestCase):
-    """Unit test class for RobotController."""
+class RobotComponentTest(unittest.TestCase):
+    """Unit test class for RobotComponent."""
 
     @patch_dynamixel
     def test_get_state(self):
         """Tests querying the state of multiple groups."""
         sim_scene = MockSimScene(nq=10)
-        robot = DynamixelRobotController(
+        robot = DynamixelRobotComponent(
             sim_scene,
             groups={
                 'a': {
@@ -88,7 +89,7 @@ class RobotControllerTest(unittest.TestCase):
                 },
             },
             device_path='test')
-        dxl = DynamixelRobotController.DEVICE_CLIENTS['test']
+        dxl = DynamixelRobotComponent.DEVICE_CLIENTS['test']
         dxl.write_desired_pos([10, 12, 20, 21, 22, 24], [1, 2, 3, 4, 5, 6])
 
         a_state, b_state, c_state = robot.get_state(['a', 'b', 'c'])
@@ -106,7 +107,7 @@ class RobotControllerTest(unittest.TestCase):
     def test_step(self):
         """Tests stepping with an action for multiple groups."""
         sim_scene = MockSimScene(nq=10, ctrl_range=[-1, 1])
-        robot = DynamixelRobotController(
+        robot = DynamixelRobotComponent(
             sim_scene,
             groups={
                 'a': {
@@ -121,12 +122,12 @@ class RobotControllerTest(unittest.TestCase):
                 },
             },
             device_path='test')
-        with patch_time('dsuite.controllers.robot.hardware_robot.time'):
+        with patch_time('dsuite.components.robot.hardware_robot.time'):
             robot.step({
                 'a': np.array([.2, .4, .6]),
                 'b': np.array([.1, .3]),
             })
-        dxl = DynamixelRobotController.DEVICE_CLIENTS['test']
+        dxl = DynamixelRobotComponent.DEVICE_CLIENTS['test']
 
         np.testing.assert_allclose(dxl.qpos, [.9, .8, .7])
 
@@ -134,7 +135,7 @@ class RobotControllerTest(unittest.TestCase):
     def test_set_state(self):
         """Tests stepping with an action for multiple groups."""
         sim_scene = MockSimScene(nq=10)
-        robot = DynamixelRobotController(
+        robot = DynamixelRobotComponent(
             sim_scene,
             groups={
                 'a': {
@@ -145,11 +146,11 @@ class RobotControllerTest(unittest.TestCase):
                 },
             },
             device_path='test')
-        with patch_time('dsuite.controllers.robot.hardware_robot.time'):
+        with patch_time('dsuite.components.robot.hardware_robot.time'):
             robot.set_state({
                 'a': RobotState(qpos=np.array([1, 2, 3])),
             })
-        dxl = DynamixelRobotController.DEVICE_CLIENTS['test']
+        dxl = DynamixelRobotComponent.DEVICE_CLIENTS['test']
 
         np.testing.assert_allclose(dxl.qpos, [2, 3, 3.5])
 
@@ -157,7 +158,7 @@ class RobotControllerTest(unittest.TestCase):
     def test_engage_motors(self):
         """Tests engaging/disengaging subsets of motors."""
         sim_scene = MockSimScene(nq=10)
-        robot = DynamixelRobotController(
+        robot = DynamixelRobotComponent(
             sim_scene,
             groups={
                 'a': {
@@ -171,7 +172,7 @@ class RobotControllerTest(unittest.TestCase):
                 }
             },
             device_path='test')
-        dxl = DynamixelRobotController.DEVICE_CLIENTS['test']
+        dxl = DynamixelRobotComponent.DEVICE_CLIENTS['test']
         np.testing.assert_array_equal(dxl.enabled, [False] * 6)
 
         robot.set_motors_engaged('a', True)

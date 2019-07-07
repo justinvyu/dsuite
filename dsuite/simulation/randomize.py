@@ -191,3 +191,43 @@ class SimRandomizer:
         if friction_loss_range is not None:
             self.model.dof_frictionloss[dof_ids] = self.rand.uniform(
                 *friction_loss_range, size=1 if all_same else num_dofs)
+
+    def randomize_actuators(self,
+                            indices: Optional[Iterable[int]] = None,
+                            all_same: bool = False,
+                            kp_range: Optional[Range] = None,
+                            kv_range: Optional[Range] = None):
+        """Randomizes the actuators in the scene.
+
+        Args:
+            indices: The actuator indices to randomize. If not provided,
+                randomizes all actuators.
+            all_same: If True, the actuators are assigned the same random value.
+            kp_range: The position feedback gain range for the actuators.
+                This assumes position control actuators.
+            kv_range: The velocity feedback gain range for the actuators.
+                This assumes velocity control actuators.
+        """
+        if indices is None:
+            act_ids = list(range(self.model.nu))
+        else:
+            nu = self.model.nu
+            assert all(-nu <= i < nu for i in indices), \
+                'All actuator indices must be in [-{}, {}]'.format(nu, nu-1)
+            act_ids = sorted(set(indices))
+        num_acts = len(act_ids)
+
+        # NOTE: For the values below, refer to:
+        # http://mujoco.org/book/XMLreference.html#actuator
+
+        # Randomize the Kp for each actuator.
+        if kp_range is not None:
+            kp = self.rand.uniform(*kp_range, size=1 if all_same else num_acts)
+            self.model.actuator_gainprm[:, 0] = kp
+            self.model.actuator_biasprm[:, 1] = -kp
+
+        # Randomize the Kv for each actuator.
+        if kv_range is not None:
+            kv = self.rand.uniform(*kv_range, size=1 if all_same else num_acts)
+            self.model.actuator_gainprm[:, 0] = kv
+            self.model.actuator_biasprm[:, 2] = -kv

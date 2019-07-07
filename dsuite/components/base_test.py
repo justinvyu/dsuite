@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for BaseController."""
+"""Unit tests for BaseComponent."""
 
 import unittest
 
-from dsuite.controllers.base import BaseController
+from dsuite.components.base import BaseComponent
 from dsuite.utils.testing.mock_sim_scene import MockSimScene
 
 
-class DummyController(BaseController):
-    """Mock controller for testing BaseController."""
+class DummyComponent(BaseComponent):
+    """Mock component for testing BaseComponent."""
 
     def __init__(self, **kwargs):
         super().__init__(sim_scene=MockSimScene(nq=1), **kwargs)
@@ -33,19 +33,19 @@ class DummyController(BaseController):
         return [0 for group in configs]
 
 
-class BaseControllerTest(unittest.TestCase):
-    """Unit test class for BaseController."""
+class BaseComponentTest(unittest.TestCase):
+    """Unit test class for BaseComponent."""
 
     def test_get_state(self):
         """Tests retrieving state from a single group."""
-        controller = DummyController(groups={'foo': {}})
-        state = controller.get_state('foo')
+        component = DummyComponent(groups={'foo': {}})
+        state = component.get_state('foo')
         self.assertEqual(state, 0)
 
     def test_get_states(self):
         """Tests retrieving state from multiple groups."""
-        controller = DummyController(groups={'foo': {}, 'bar': {}})
-        foo_state, bar_state = controller.get_state(['foo', 'bar'])
+        component = DummyComponent(groups={'foo': {}, 'bar': {}})
+        foo_state, bar_state = component.get_state(['foo', 'bar'])
         self.assertEqual(foo_state, 0)
         self.assertEqual(bar_state, 0)
 

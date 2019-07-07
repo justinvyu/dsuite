@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Implementation of TrackerController using OpenVR to track devices."""
+"""Implementation of TrackerComponent using OpenVR to track devices."""
 
 import logging
 from typing import Dict, Optional, Sequence, Union
 
 from transforms3d.quaternions import mat2quat
 
-from dsuite.controllers.tracking import (TrackerController, TrackerState)
-from dsuite.controllers.tracking.tracker import TrackerGroupConfig
+from dsuite.components.tracking import (TrackerComponent, TrackerState)
+from dsuite.components.tracking.tracker import TrackerGroupConfig
 
 
 class VrTrackerGroupConfig(TrackerGroupConfig):
-    """Stores group configuration for a VrTrackerController."""
+    """Stores group configuration for a VrTrackerComponent."""
 
     def __init__(self,
                  *args,
@@ -34,7 +34,7 @@ class VrTrackerGroupConfig(TrackerGroupConfig):
                  mimic_ignore_z_axis: bool = False,
                  mimic_ignore_rotation: bool = False,
                  **kwargs):
-        """Initializes a new configuration for a VrTrackerController group.
+        """Initializes a new configuration for a VrTrackerComponent group.
 
         Args:
             device_identifier: The device index or device serial string of the
@@ -56,17 +56,17 @@ class VrTrackerGroupConfig(TrackerGroupConfig):
         self.mimic_ignore_rotation = mimic_ignore_rotation
 
 
-class VrTrackerController(TrackerController):
-    """Controller for reading tracking data from a HTC Vive."""
+class VrTrackerComponent(TrackerComponent):
+    """Component for reading tracking data from a HTC Vive."""
 
     # Cached VR client that is shared for the application lifetime.
     _VR_CLIENT = None
 
     def __init__(self, *args, **kwargs):
-        """Initializes a ViveTrackerController."""
+        """Initializes a ViveTrackerComponent."""
         super().__init__(*args, **kwargs)
         if self._VR_CLIENT is None:
-            from dsuite.controllers.tracking.virtual_reality import VrClient
+            from dsuite.components.tracking.virtual_reality import VrClient
             self._VR_CLIENT = VrClient()
 
         # Check that all devices exist.

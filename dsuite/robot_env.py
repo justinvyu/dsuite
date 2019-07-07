@@ -83,7 +83,7 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
         self._observation_keys = observation_keys
         self._reward_keys = reward_keys
         self._use_dict_obs = use_dict_obs
-        self._controllers = []
+        self._components = []
 
         # The following spaces are initialized by their respective `initialize`
         # methods, e.g. `_initialize_observation_space`.
@@ -318,9 +318,9 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
 
     def close(self):
         """Cleans up any resources used by the environment."""
-        for controller in self._controllers:
-            controller.close()
-        self._controllers.clear()
+        for component in self._components:
+            component.close()
+        self._components.clear()
         self.sim_scene.close()
 
     #===========================================================================
@@ -498,23 +498,23 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
             reward_values = reward_dict.values()
         return np.sum(np.fromiter(reward_values, dtype=float))
 
-    def _add_controller(self, class_path: str, **controller_kwargs) -> Any:
-        """Creates a new controller for this environment instance.
+    def _add_component(self, class_path: str, **component_kwargs) -> Any:
+        """Creates a new component for this environment instance.
 
         Args:
-            class_path: The fully qualified class path of the controller.
-                e.g. `dsuite.controllers.robot:RobotController`
-            controller_kwargs: The initialization parameters for the controller.
+            class_path: The fully qualified class path of the component.
+                e.g. `dsuite.components.robot:RobotComponent`
+            component_kwargs: The initialization parameters for the component.
         """
-        # Get a handle to the controller class.
+        # Get a handle to the component class.
         module_name, cls_name = class_path.split(':')
-        controller_module = importlib.import_module(module_name)
-        controller_cls = getattr(controller_module, cls_name)
+        component_module = importlib.import_module(module_name)
+        component_cls = getattr(component_module, cls_name)
 
-        # Instantiate the controller.
-        controller = controller_cls(
+        # Instantiate the component.
+        component = component_cls(
             sim_scene=self.sim_scene,
             random_state=self.np_random,
-            **controller_kwargs)
-        self._controllers.append(controller)
-        return controller
+            **component_kwargs)
+        self._components.append(component)
+        return component

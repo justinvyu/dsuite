@@ -47,7 +47,7 @@ import numpy as np
 
 import dsuite
 from dsuite.scripts.utils import parse_env_args
-from dsuite.controllers.robot import DynamixelRobotController
+from dsuite.components.robot import DynamixelRobotComponent
 
 MIN_FRAME_TIME = 1.0 / 60.0
 
@@ -174,14 +174,14 @@ class PlayShell(cmd.Cmd):
         """Engages motors. This only affects hardware."""
         group_names = group_names.split()
         with self._env_lock:
-            if isinstance(self._env.robot, DynamixelRobotController):
+            if isinstance(self._env.robot, DynamixelRobotComponent):
                 self._env.robot.set_motors_engaged(group_names, True)
 
     def do_disengage(self, group_names):
         """Disengages motors. This only affects hardware."""
         group_names = group_names.split()
         with self._env_lock:
-            if isinstance(self._env.robot, DynamixelRobotController):
+            if isinstance(self._env.robot, DynamixelRobotComponent):
                 self._env.robot.set_motors_engaged(group_names, False)
 
     def emptyline(self):

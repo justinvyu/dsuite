@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Configuration for a robot controller group."""
+"""Configuration for a robot component group."""
 
 import enum
 from typing import Iterable, Optional, Tuple
@@ -30,7 +30,7 @@ class ControlMode(enum.Enum):
 
 
 class RobotGroupConfig:
-    """Stores group configuration for a RobotController."""
+    """Stores group configuration for a RobotComponent."""
 
     def __init__(self,
                  sim_scene: SimScene,
@@ -42,7 +42,7 @@ class RobotGroupConfig:
                  qvel_range: Optional[Iterable[Tuple[float, float]]] = None,
                  actuator_range: Optional[Iterable[Tuple[float, float]]] = None,
                  sim_observation_noise: float = 0.0):
-        """Initializes a new configuration for a RobotController group.
+        """Initializes a new configuration for a RobotComponent group.
 
         Args:
             sim_scene: The simulation, used for validation purposes.

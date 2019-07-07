@@ -22,8 +22,10 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 from gym.envs import registration as gym_reg
 
 
-def parse_env_args(arg_parser: Optional[argparse.ArgumentParser] = None
-                  ) -> Tuple[str, Dict, argparse.Namespace]:
+def parse_env_args(
+        arg_parser: Optional[argparse.ArgumentParser] = None,
+        default_env_name: Optional[str] = None,
+) -> Tuple[str, Dict, argparse.Namespace]:
     """Parses the given arguments to get an environment ID and parameters.
 
     Args:
@@ -39,7 +41,11 @@ def parse_env_args(arg_parser: Optional[argparse.ArgumentParser] = None
     if arg_parser is None:
         arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
-        '-e', '--env_name', required=True, help='The environment to load.')
+        '-e',
+        '--env_name',
+        required=(default_env_name is None),
+        default=default_env_name,
+        help='The environment to load.')
     arg_parser.add_argument('-d', '--device', help='The device to connect to.')
     arg_parser.add_argument(
         '--param',

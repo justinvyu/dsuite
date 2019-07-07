@@ -25,7 +25,7 @@ import time
 import gym
 
 import dsuite
-from dsuite.controllers.robot import DynamixelRobotController
+from dsuite.components.robot import DynamixelRobotComponent
 from dsuite.scripts.utils import parse_env_args
 
 
@@ -40,10 +40,10 @@ def main():
         help='The number of resets to perform.')
     env_id, params, args = parse_env_args(parser)
 
-    # Create the environment and get the robot controller.
+    # Create the environment and get the robot component.
     dsuite.set_env_params(env_id, params)
     env = gym.make(env_id).unwrapped
-    assert isinstance(env.robot, DynamixelRobotController)
+    assert isinstance(env.robot, DynamixelRobotComponent)
 
     for i in range(args.num_repeats):
         print('Starting reset #{}'.format(i))
