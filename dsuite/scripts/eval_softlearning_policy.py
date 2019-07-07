@@ -16,6 +16,13 @@
 
 Example usage:
 python -m dsuite.scripts.eval_softlearning_policy --device /dev/ttyUSB0
+
+This runs the DClawTurnRandom-v0 environment by default. To run other
+environments, pass in the environment name with `-e/--env_name`
+
+python -m dsuite.scripts.eval_softlearning_policy \
+    --env_name DClawScrewFixed-v0 \
+    --device /dev/ttyUSB0
 """
 
 import argparse
@@ -39,10 +46,15 @@ gym_adapter.DEFAULT_OBSERVATION_KEY = 'obs'
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 
 DEFAULT_ENV_NAME = 'DClawTurnRandom-v0'
-DEFAULT_POLICY_PATH = os.path.join(SCRIPT_DIR,
-                                   'data/DClawTurnRandom-v0-policy.pkl')
+DEFAULT_POLICY_FORMAT = os.path.join(SCRIPT_DIR, 'data/{}-policy.pkl')
 DEFAULT_EPISODE_COUNT = 10
-DEFAULT_EPISODE_LEN = 160
+
+DEFAULT_EPISODE_LENGTHS = {
+    'DClawTurnFixed-v0': 160,
+    'DClawTurnRandom-v0': 160,
+    'DClawScrewFixed-v0': 320,
+    'DClawScrewRandom-v0': 320,
+}
 
 
 class CsvLogger:
@@ -114,7 +126,6 @@ def main():
     parser.add_argument(
         '-p',
         '--policy',
-        default=DEFAULT_POLICY_PATH,
         help='The path to the pickled softlearning policy to load.')
     parser.add_argument(
         '-n',
@@ -125,7 +136,6 @@ def main():
     parser.add_argument(
         '-l',
         '--episode_length',
-        default=DEFAULT_EPISODE_LEN,
         type=int,
         help='The number of steps in each episode.')
     parser.add_argument(
@@ -146,20 +156,29 @@ def main():
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
+    # Get default defaults from the environment name.
+    policy_path = args.policy
+    if not policy_path:
+        policy_path = DEFAULT_POLICY_FORMAT.format(env_name)
+    episode_length = args.episode_length
+    if not episode_length:
+        episode_length = DEFAULT_EPISODE_LENGTHS[env_name]
+
     # Load the policy.
-    with open(args.policy, 'rb') as f:
+    with open(policy_path, 'rb') as f:
         policy_data = pickle.load(f)
         policy = policy_data['policy']
         policy.set_weights(policy_data['weights'])
 
-    with CsvLogger(os.path.join(args.output, 'results.csv')) as logger:
+    csv_path = os.path.join(args.output, '{}-results.csv'.format(env_name))
+    with CsvLogger(csv_path) as logger:
         with policy.set_deterministic(True):
             do_rollouts(
                 env,
                 policy,
                 logger,
                 num_episodes=args.num_episodes,
-                episode_length=args.episode_length,
+                episode_length=episode_length,
                 render_mode=args.render)
 
 
