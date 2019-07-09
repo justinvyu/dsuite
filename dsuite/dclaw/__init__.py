@@ -77,8 +77,28 @@ register(
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3Fixed')
 
 register(
+    env_id='DClawTurnFreeValve3RandomReset-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3RandomReset')
+
+register(
     env_id='DClawTurnFreeValve3ResetFree-v0',
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3ResetFree')
+
+register(
+    env_id='DClawTurnFreeValve3ResetFreeSwapGoal-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3ResetFreeSwapGoal')
+
+register(
+    env_id='DClawTurnFreeValve3FixedResetSwapGoal-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3FixedResetSwapGoal')
+
+register(
+    env_id='DClawTurnFreeValve3ResetFreeCurriculum-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3ResetFreeCurriculum')
+
+register(
+    env_id='DClawTurnFreeValve3ResetFreeCurriculumEval-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3ResetFreeCurriculumEval')
 
 register(
     env_id='DClawTurnFreeValve3Image-v0',

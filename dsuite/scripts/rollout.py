@@ -33,7 +33,7 @@ import gym
 import numpy as np
 
 import dsuite
-from dsuite.scripts.utils import parse_args
+from dsuite.scripts.utils import parse_env_args
 from softlearning.misc.utils import save_video
 
 def do_rollouts(env,

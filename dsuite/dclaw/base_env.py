@@ -24,11 +24,12 @@ from dsuite.controllers.robot import DynamixelRobotController, RobotState
 from dsuite.dclaw.config import (
     DCLAW_SIM_CONFIG, DCLAW_HARDWARE_CONFIG, DCLAW_OBJECT_SIM_CONFIG,
     DCLAW_FREE_OBJECT_SIM_CONFIG,
+    FREE_DCLAW_FREE_OBJECT_SIM_CONFIG,
     DCLAW_OBJECT_HARDWARE_CONFIG,
     DCLAW_OBJECT_GUIDE_HARDWARE_CONFIG,
     DEFAULT_DCLAW_CALIBRATION_MAP)
 from dsuite.robot_env import make_box_space, RobotEnv
-
+DEFAULT_CLAW_RESET_POSE = np.array([0, -np.pi/3, np.pi/3]*3)
 
 class BaseDClawEnv(RobotEnv, metaclass=abc.ABCMeta):
     """Base environment for all DClaw robot tasks."""
@@ -87,12 +88,26 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
                 config = DCLAW_OBJECT_SIM_CONFIG
         return config
 
-    def _reset_dclaw_and_object(self,
-                                claw_pos: Optional[Sequence[float]] = None,
-                                claw_vel: Optional[Sequence[float]] = None,
-                                object_pos: Optional[Sequence[float]] = None,
-                                object_vel: Optional[Sequence[float]] = None,
-                                guide_pos: Optional[Sequence[float]] = None):
+    def __init__(self, **kwargs):
+        """Initializes the environment."""
+        super().__init__(**kwargs)
+
+        # Make a copy of the model to store initial values.
+        self._nominal_model = self.sim_scene.copy_model()
+
+        # Get handles to commonly referenced elements.
+        self._mount_bid = self.model.body_name2id('mount')
+        self._mount_gid = self.model.geom_name2id('mount')
+        self._object_bid = self.model.body_name2id('object')
+
+    def _reset_dclaw_and_object(
+            self,
+            claw_pos: Optional[Sequence[float]] = None,
+            claw_vel: Optional[Sequence[float]] = None,
+            object_pos: Optional[Sequence[float]] = None,
+            object_vel: Optional[Sequence[float]] = None,
+            guide_pos: Optional[Sequence[float]] = None,
+    ):
         """Reset procedure for DClaw robots that manipulate objects.
 
         Args:
