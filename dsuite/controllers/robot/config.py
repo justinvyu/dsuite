@@ -27,6 +27,7 @@ class ControlMode(enum.Enum):
     JOINT_TORQUE = 0
     JOINT_POSITION = 1
     JOINT_VELOCITY = 2
+    JOINT_DELTA_POSITION = 3
 
 
 class RobotGroupConfig:
@@ -41,7 +42,8 @@ class RobotGroupConfig:
                  qpos_range: Optional[Iterable[Tuple[float, float]]] = None,
                  qvel_range: Optional[Iterable[Tuple[float, float]]] = None,
                  actuator_range: Optional[Iterable[Tuple[float, float]]] = None,
-                 sim_observation_noise: float = 0.0):
+                 sim_observation_noise: float = 0.0,
+                 actuator_delta_range: Optional[Iterable[Tuple[float, float]]] = None):
         """Initializes a new configuration for a RobotController group.
 
         Args:
@@ -87,7 +89,7 @@ class RobotGroupConfig:
         if qpos_indices is not None:
             nq = sim_scene.model.nq
             assert all(-nq <= i < nq for i in qpos_indices), \
-                'All qpos indices must be in [-{}, {}]'.format(nq, nq - 1)
+                'All qpos indices must be in [{}, {}]'.format(-nq, nq - 1)
             self.qpos_indices = np.array(qpos_indices, dtype=int)
 
         if qvel_indices is None:
@@ -121,7 +123,8 @@ class RobotGroupConfig:
                 'qvel_range must match the length of qpos_indices'
 
         if actuator_indices is None:
-            if self.control_mode == ControlMode.JOINT_POSITION:
+            if self.control_mode == ControlMode.JOINT_POSITION or \
+               self.control_mode == ControlMode.JOINT_DELTA_POSITION:
                 actuator_indices = self.qpos_indices
             elif self.control_mode == ControlMode.JOINT_VELOCITY:
                 actuator_indices = self.qvel_indices
@@ -136,7 +139,8 @@ class RobotGroupConfig:
             self.actuator_indices = np.array(actuator_indices, dtype=int)
 
         if actuator_range is None:
-            if self.control_mode == ControlMode.JOINT_POSITION:
+            if self.control_mode == ControlMode.JOINT_POSITION or \
+               self.control_mode == ControlMode.JOINT_DELTA_POSITION:
                 actuator_range = self.qpos_range
             elif self.control_mode == ControlMode.JOINT_VELOCITY:
                 actuator_range = self.qvel_range
@@ -154,6 +158,25 @@ class RobotGroupConfig:
                     (len(self.actuator_indices), 2)), \
                 'actuator_range must match the length of actuator_indices'
 
+        # if actuator_delta_range is None:
+        #     if self.control_mode == ControlMode.JOINT_DELTA_POSITION:
+        #         actuator_range = self.qpos_range * 0.1
+        #     # elif self.control_mode == ControlMode.JOINT_VELOCITY:
+        #     #     actuator_range = self.qvel_range
+        #     # Default to use the simulation's control range.
+        #     if actuator_delta_range is None and actuator_indices is not None:
+        #         actuator_delta_range = sim_scene.model.actuator_ctrlrange[
+        #             actuator_indices, :] * 0.1
+
+        self.actuator_delta_range = None
+        if actuator_delta_range is not None:
+            assert all(lower < upper for lower, upper in actuator_delta_range), \
+                'Items in actuator_range must follow (lower, upper)'
+            self.actuator_delta_range = np.array(actuator_delta_range, dtype=np.float32)
+            assert (self.actuator_delta_range.shape ==
+                    (len(self.actuator_indices), 2)), \
+                'actuator_range must match the length of actuator_indices'
+
         # Calculate the denormalization center and range from the sim model.
         self.denormalize_center = None
         self.denormalize_range = None
@@ -161,3 +184,16 @@ class RobotGroupConfig:
             self.denormalize_center = np.mean(self.actuator_range, axis=1)
             self.denormalize_range = 0.5 * (
                 self.actuator_range[:, 1] - self.actuator_range[:, 0])
+        if self.actuator_delta_range is not None:
+            self.denormalize_range = 0.5 * (
+                self.actuator_delta_range[:, 1] - self.actuator_delta_range[:, 0])
+
+    def set_control_mode(self, control_mode):
+        if control_mode == ControlMode.JOINT_POSITION:
+            self.denormalize_center = None
+            self.denormalize_range = None
+            if self.actuator_range is not None:
+                self.denormalize_center = np.mean(self.actuator_range, axis=1)
+                self.denormalize_range = 0.5 * (
+                    self.actuator_range[:, 1] - self.actuator_range[:, 0])
+        self.control_mode = control_mode

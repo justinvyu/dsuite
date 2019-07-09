@@ -63,7 +63,8 @@ DEFAULT_OBSERVATION_KEYS = (
     'object_angle_cos',
     'object_angle_sin',
     'last_action',
-    'object_to_target_angle_dist',
+    # 'object_to_target_angle_dist',
+    'target_angle',
 )
 
 # Reset pose for the claw joints.
@@ -138,21 +139,24 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         claw_state, object_state = self.robot.get_state(['dclaw', 'object'])
 
         # Calculate the signed angle difference to the target in [-pi, pi].
-        object_angle = object_state.qpos
+        object_angle = object_state.qpos.copy()
         object_to_target_angle_dist = circle_distance(
             self._target_object_pos, object_angle)
         # target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
-
-        return collections.OrderedDict((
-            ('claw_qpos', claw_state.qpos),
-            ('claw_qvel', claw_state.qvel),
+        print([object_angle, self._target_object_pos])
+        obs_dict = collections.OrderedDict((
+            ('claw_qpos', claw_state.qpos.copy()),
+            ('claw_qvel', claw_state.qvel.copy()),
             ('object_angle_cos', np.cos(object_state.qpos)),
             ('object_angle_sin', np.sin(object_state.qpos)),
-            ('object_rotational_vel', object_state.qvel),
-            ('last_action', self._last_action),
+            ('object_rotational_vel', object_state.qvel.copy()),
+            ('last_action', self._last_action.copy()),
             # ('target_error', target_error),
+            ('target_angle', self._target_object_pos[None].copy()),
             ('object_to_target_angle_dist', object_to_target_angle_dist),
         ))
+
+        return obs_dict
 
     def get_reward_dict(
             self,

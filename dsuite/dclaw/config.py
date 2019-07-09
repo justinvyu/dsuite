@@ -18,6 +18,7 @@ import numpy as np
 
 from dsuite.controllers.robot.dynamixel_utils import CalibrationMap
 from dsuite.utils.config_utils import merge_configs
+from dsuite.controllers.robot.config import ControlMode
 
 # Convenience constants.
 PI = np.pi
@@ -27,14 +28,20 @@ DCLAW_SIM_CONFIG = {
     'class_path': 'dsuite.controllers.robot:RobotController',
     'groups': {
         'dclaw': {
+            'control_mode': ControlMode.JOINT_POSITION,
+            'actuator_delta_range': [
+                (-np.pi/8, np.pi/8),
+                (-np.pi/6, np.pi/6),
+                (-np.pi/4, np.pi/4),
+            ] * 3,
             'qpos_indices': range(9),
             'qpos_range': [
                 (-PI / 4, PI / 4),  # 45 degrees for top servos.
                 (-PI / 3, PI / 3),  # 60 degrees for middle servos.
                 (-PI / 2, PI / 2),  # 90 degrees for bottom servos.
             ] * 3,
-            'qvel_range': [(-2 * PI / 3, 2 * PI / 3)] * 9,
-            'sim_observation_noise': 0.05,
+            'qvel_range': [(-1.5, 1.5)] * 9,
+            'sim_observation_noise': 0.00,
         },
     }
 }
@@ -45,7 +52,7 @@ _OBJECT_SIM_CONFIG = {
         'object': {
             'qpos_indices': [-1],  # The object is the last qpos.
             'qpos_range': [(-PI, PI)],
-            'sim_observation_noise': 0.05,
+            'sim_observation_noise': 0.00,
         },
         'guide': {},  # The guide group is a no-op in simulation.
     }
@@ -99,7 +106,9 @@ _OBJECT_HARDWARE_CONFIG = merge_configs(
 DCLAW_OBJECT_SIM_CONFIG = merge_configs(DCLAW_SIM_CONFIG, _OBJECT_SIM_CONFIG)
 
 # Configuration for a DClaw with a free object in simulation.
-DCLAW_FREE_OBJECT_SIM_CONFIG = merge_configs(DCLAW_SIM_CONFIG, _FREE_OBJECT_SIM_CONFIG)
+DCLAW_FREE_OBJECT_SIM_CONFIG = merge_configs(
+    DCLAW_SIM_CONFIG, _FREE_OBJECT_SIM_CONFIG)
+
 
 # Configuration for a DClaw with an object in hardware.
 DCLAW_OBJECT_HARDWARE_CONFIG = merge_configs(

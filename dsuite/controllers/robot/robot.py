@@ -162,12 +162,15 @@ class RobotController(BaseController):
             # Add observation noise to the state.
             self._apply_observation_noise(state, config)
 
+            if config.control_mode == ControlMode.JOINT_DELTA_POSITION:
+                config.denormalize_center = state.qpos
             states.append(state)
         return states
 
     def _set_group_states(
             self, group_states: Sequence[Tuple[RobotGroupConfig, RobotState]]):
         """Sets the robot joints to the given states."""
+
         for config, state in group_states:
             if config.qpos_indices is None:
                 continue
@@ -209,7 +212,8 @@ class RobotController(BaseController):
             state.qvel += noise(config.qvel_range)
 
     def _denormalize_action(self, action: np.ndarray,
-                            config: RobotGroupConfig) -> np.ndarray:
+                            config: RobotGroupConfig,
+                            delta_control: bool=False) -> np.ndarray:
         """Denormalizes the given action."""
         if config.denormalize_center.shape != action.shape:
             raise ValueError(
@@ -272,7 +276,8 @@ class RobotController(BaseController):
         Returns:
             The clipped action.
         """
-        if config.control_mode == ControlMode.JOINT_POSITION:
+        if config.control_mode == ControlMode.JOINT_POSITION or \
+           config.control_mode == ControlMode.JOINT_DELTA_POSITION:
             # Apply position bounds.
             if config.qpos_range is not None:
                 action = np.clip(action, config.qpos_range[:, 0],

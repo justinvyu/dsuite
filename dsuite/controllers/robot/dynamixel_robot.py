@@ -197,7 +197,9 @@ class DynamixelRobotController(HardwareRobotController):
             if control is not None:
                 # TODO(michaelahn): Consider if other control modes need
                 # decalibration.
-                if config.control_mode == ControlMode.JOINT_POSITION:
+                # TODO(henryzhu): Check if this works for DELTAPOSCONTRL
+                if config.control_mode == ControlMode.JOINT_POSITION or \
+                   config.control_mode == ControlMode.JOINT_DELTA_POSITION:
                     control = self._decalibrate_qpos(control, config)
 
                 total_motor_id_mask[config.motor_id_indices] = True
