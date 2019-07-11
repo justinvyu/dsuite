@@ -77,6 +77,10 @@ register(
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3Fixed')
 
 register(
+    env_id='DClawTurnFreeValve3Hardware-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3Hardware')
+
+register(
     env_id='DClawTurnFreeValve3RandomReset-v0',
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3RandomReset')
 

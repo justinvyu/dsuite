@@ -27,7 +27,9 @@ import numpy as np
 from transforms3d.euler import euler2quat
 
 from dsuite.dclaw.base_env import (BaseDClawObjectEnv,
+                                   BaseDClawEnv,
                                    DEFAULT_CLAW_RESET_POSE)
+from dsuite.dclaw.turn import get_image_service
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance
@@ -48,6 +50,12 @@ DEFAULT_OBSERVATION_KEYS = (
 #    'object_to_target_relative_position',
 #    'in_corner',
 )
+
+DEFAULT_HARDWARE_OBSERVATION_KEYS = (
+    'claw_qpos',
+    'last_action',
+)
+
 
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_free_valve3_in_arena.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_less_tiny_box.xml'
@@ -253,6 +261,72 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             init_object_qpos.append(object_qpos)
 
         return np.concatenate(init_claw_qpos), np.concatenate(init_object_qpos)
+
+    def render(self, *args, **kwargs):
+        if self._camera_config is not None:
+            return self._image_service.get_image(*args, **kwargs)
+
+        return super().render(*args, **kwargs)
+
+
+@configurable(pickleable=True)
+class DClawTurnFreeValve3Hardware(BaseDClawEnv):
+    def __init__(self,
+                 camera_config: dict = None,
+                 device_path: str = None,
+                 observation_keys: Sequence[str] = DEFAULT_HARDWARE_OBSERVATION_KEYS,
+                 frame_skip: int = 40,
+                 **kwargs):
+        super().__init__(
+           sim_model=get_asset_path('dsuite-scenes/dclaw/dclaw3xh.xml'),
+           robot_config=self.get_config_for_device(device_path),
+           frame_skip=frame_skip,
+           **kwargs)
+        self._camera_config = camera_config
+        if camera_config:
+            self._image_service = get_image_service(**camera_config)
+        self._last_action = np.zeros(self.action_space.shape[0])
+
+    def get_obs_dict(self) -> Dict[str, np.ndarray]:
+        state = self.robot.get_state('dclaw')
+        return collections.OrderedDict((
+            ('claw_qpos', state.qpos),
+            ('claw_qvel', state.qvel),
+            ('last_action', self._last_action),
+        ))
+
+    def get_reward_dict(
+            self,
+            action: np.ndarray,
+            obs_dict: Dict[str, np.ndarray]
+    ) -> Dict[str, np.ndarray]:
+        qvel = obs_dict['claw_qvel']
+        reward_dict = collections.OrderedDict({
+            'joint_vel_cost': -0.1 * np.linalg.norm(qvel[np.abs(qvel) >= 4.5])
+        })
+        return reward_dict
+
+    def get_score_dict(
+            self,
+            obs_dict: Dict[str, np.ndarray],
+            reawrd_dict: Dict[str, np.ndarray]
+    ) -> Dict[str, np.ndarray]:
+        return collections.OrderedDict()
+
+    def _step(self, action: np.ndarray):
+        self.robot.step({'dclaw': action})
+
+    def _reset(self):
+        self.robot.set_state({
+            'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE,
+                qvel=np.zeros(self.action_space.shape[0]))
+        })
+
+    def render(self, *args, **kwargs):
+        if self._camera_config is not None:
+            return self._image_service.get_image(*args, **kwargs)
+
+        return super().render(*args, **kwargs)
 
 
 @configurable(pickleable=True)
