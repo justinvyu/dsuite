@@ -69,7 +69,8 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
     def get_config_for_device(
             cls,
             device_path: Optional[str] = None,
-            free: bool = False
+            free_object: bool = False,
+            free_claw: bool = False,
     ) -> Dict[str, Any]:
         """Returns the configuration for the given device path."""
         if device_path is not None:
@@ -81,8 +82,11 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
             # Calibrate the configuration groups.
             DEFAULT_DCLAW_CALIBRATION_MAP.update_group_configs(config)
         else:
-            if free:
-                config = DCLAW_FREE_OBJECT_SIM_CONFIG
+            if free_object:
+                if free_claw:
+                    config = FREE_DCLAW_FREE_OBJECT_SIM_CONFIG
+                else:
+                    config = DCLAW_FREE_OBJECT_SIM_CONFIG
             else:
                 config = DCLAW_OBJECT_SIM_CONFIG
         return config
