@@ -73,6 +73,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
                  device_path: Optional[str] = None,
                  frame_skip: int = 40,
                  free_claw: bool = False,
+                 position_reward_weight: int = 1,
                  **kwargs):
         """Initializes the environment.
 
@@ -83,6 +84,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             device_path: The device path to Dynamixel hardware.
             frame_skip: The number of simulation steps per environment step.
         """
+        self._position_reward_weight = position_reward_weight
 
         super().__init__(
             sim_model=get_asset_path(asset_path),
@@ -92,13 +94,13 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             frame_skip=frame_skip,
             **kwargs)
 
-        self._desired_claw_pos = DEFAULT_CLAW_RESET_POSE
+        self._desired_claw_pos = DEFAULT_CLAW_RESET_POSE.copy()
         self._last_action = np.zeros(9)
 
         self._target_bid = self.model.body_name2id('target')
 
         # The following are modified (possibly every reset) by subclasses.
-        self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE
+        self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
         self._initial_object_qpos = (0, 0, 0, 0, 0, 0)
         self._initial_object_qvel = (0, 0, 0, 0, 0, 0)
         self._set_target_object_qpos((0, 0, 0, 0, 0, 0))
@@ -189,10 +191,15 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         reward_dict = collections.OrderedDict((
             # Penalty for distance away from goal.
-            ('object_to_target_position_distance_cost', -5 *
-                object_to_target_position_distance),
-            ('object_to_target_orientation_distance_cost', -5 *
-                object_to_target_circle_distance),
+            # ('object_to_target_position_distance_cost', -5 *
+            #     object_to_target_position_distance),
+            # ('object_to_target_orientation_distance_cost', -5 *
+            #     object_to_target_circle_distance),
+            ('object_to_target_position_distance_cost', - self._position_reward_weight * \
+             np.log(20 * object_to_target_position_distance + 0.005)),
+            ('object_to_target_orientation_distance_cost',  - 1 * \
+             np.log(1 * object_to_target_circle_distance + 0.005)),
+
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
              -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)
@@ -334,10 +341,10 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
     """Turns the object with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 init_angle_range=(0., 0.),
+                 init_angle_range=(0, 0),
                  target_angle_range=(np.pi, np.pi),
-                 init_x_pos_range=(0., 0.),
-                 init_y_pos_range=(0., 0.),
+                 init_x_pos_range=(0, 0),
+                 init_y_pos_range=(0, 0),
                  *args, **kwargs):
         self._init_angle_range = init_angle_range
         self._target_angle_range = target_angle_range
@@ -346,10 +353,13 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
         super().__init__(*args, **kwargs)
 
     def _sample_goal(self, obs_dict):
-        target_angle = np.random.uniform(
-            low=self._target_angle_range[0],
-            high=self._target_angle_range[1]
-        )
+        if isinstance(self._target_angle_range, (list,)):
+            target_angle = np.random.choice(self._target_angle_range)
+        elif isinstance(self._target_angle_range, (tuple,)):
+            target_angle = np.random.uniform(
+                low=self._target_angle_range[0],
+                high=self._target_angle_range[1]
+            )
         return (0, 0, 0, 0, 0, target_angle)
 
     def _reset(self):
@@ -422,7 +432,7 @@ class DClawTurnFreeValve3RandomReset(BaseDClawTurnFreeObject):
                 self.data.qfrc_applied[-6:-4] = np.array([1, 1]) * corner_index
                 self.sim_scene.advance()
             self.data.qfrc_applied[-6:-4] = 0
-            self.data.qpos[:9] = DEFAULT_CLAW_RESET_POSE
+            self.data.qpos[:9] = DEFAULT_CLAW_RESET_POSE.copy()
 
         # self._set_target_object_qpos(self._sample_goal(obs_dict))
         return self._get_obs(self.get_obs_dict())
@@ -452,8 +462,9 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
     def __init__(self,
                  swap_goal_upon_completion: bool = True,
                  reset_fingers=True,
+                 position_reward_weight=1,
                  **kwargs):
-        self._last_claw_qpos = DEFAULT_CLAW_RESET_POSE
+        self._last_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
         self._last_object_position = np.array([0, 0, 0])
         self._last_object_orientation = np.array([0, 0, 0])
         self._reset_fingers = reset_fingers
@@ -463,6 +474,8 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
         # self._goals = [(-0.06, -0.08, 0, 0, 0, 0), (-0.06, -0.08, 0, 0, 0, 0)]
         self._goals = ((0, 0, 0, 0, 0, np.pi), (0, 0, 0, 0, 0, np.pi))
         self._goal_index = 1
+
+        self._position_reward_weight = position_reward_weight
 
     # def get_obs_dict(self) -> Dict[str, np.ndarray]:
     #     """Returns the current observation of the environment.
@@ -476,29 +489,6 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
     #     object_position = self._last_object_position = obs_dict['object_position']
     #     self._last_object_orientation = obs_dict['object_orientation']
     #     return obs_dict
-
-    def get_reward_dict(
-            self,
-            action: np.ndarray,
-            obs_dict: Dict[str, np.ndarray],
-    ) -> Dict[str, np.ndarray]:
-        """Returns the reward for the given action and observation."""
-        # object_to_target_relative_orientation = obs_dict['object_to_target_relative_orientation']
-        reward_dict = super().get_reward_dict(action, obs_dict)
-
-        object_to_target_position_distance = obs_dict['object_to_target_position_distance']
-
-        object_to_target_circle_distance = obs_dict['object_to_target_circle_distance']
-
-        # reward_dict['object_to_target_position_distance_cost'] = -0 * \
-        #     object_to_target_position_distance
-        # reward_dict['object_to_target_orientation_distance_cost'] = -1 * \
-        #     object_to_target_circle_distance
-        reward_dict['object_to_target_position_distance_cost'] = - 1 * \
-            np.log(20 * object_to_target_position_distance + 1e-10)
-        reward_dict['object_to_target_orientation_distance_cost'] = - 1 * \
-            np.log(1 * object_to_target_circle_distance + 0.01)
-        return reward_dict
 
     def _sample_goal(self, obs_dict):
         object_to_target_position_distance = obs_dict['object_to_target_position_distance']
@@ -579,32 +569,23 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
         path['rewards'] = path['observations']['other_reward']
         return path
 
-    def get_reward_dict(
-            self,
-            action: np.ndarray,
-            obs_dict: Dict[str, np.ndarray],
-    ) -> Dict[str, np.ndarray]:
-        """Returns the reward for the given action and observation."""
-        # object_to_target_relative_orientation = obs_dict['object_to_target_relative_orientation']
-        reward_dict = super().get_reward_dict(action, obs_dict)
-
-        object_to_target_position_distance = obs_dict['object_to_target_position_distance']
-
-        object_to_target_circle_distance = obs_dict['object_to_target_circle_distance']
-
-        # reward_dict['object_to_target_position_distance_cost'] = -0 * \
-        #     object_to_target_position_distance
-        # Reward_Dict['object_to_target_orientation_distance_cost'] = -1 * \
-        #     object_to_target_circle_distance
-        reward_dict['object_to_target_position_distance_cost'] = - 1 * \
-            np.log(20 * object_to_target_position_distance + 1e-4)
-        reward_dict['object_to_target_orientation_distance_cost'] = - 1 * \
-            np.log(object_to_target_circle_distance + 1e-10)
-        return reward_dict
-
     def _sample_goal(self, obs_dict):
         self._goal_index = (self._goal_index + 1) % self.n_goals
         return self._goals[self._goal_index]
+
+
+@configurable(pickleable=True)
+class DClawTurnFreeValve3ResetFreeRandomGoal(DClawTurnFreeValve3ResetFree):
+    """Turns the object reset-free with a target position swapped every reset."""
+    def __init__(self,
+                 goal_range=((-0.08, -0.08, 0, 0, 0, -np.pi), (0.08, 0.08, 0, 0, 0, np.pi)),
+                 **kwargs):
+        self._goal_range = goal_range
+        super().__init__(
+            **kwargs)
+
+    def _sample_goal(self, obs_dict):
+        return np.random.uniform(low=self._goal_range[0], high=self._goal_range[1])
 
 
 @configurable(pickleable=True)
