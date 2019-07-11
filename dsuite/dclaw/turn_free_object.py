@@ -71,6 +71,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
                  asset_path: str = DCLAW3_ASSET_PATH,
                  observation_keys: Sequence[str] = DEFAULT_OBSERVATION_KEYS,
                  device_path: Optional[str] = None,
+                 camera_config: dict = None,
                  frame_skip: int = 40,
                  free_claw: bool = False,
                  position_reward_weight: int = 1,
@@ -85,7 +86,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             frame_skip: The number of simulation steps per environment step.
         """
         self._position_reward_weight = position_reward_weight
-
+        self._camera_config = camera_config
         super().__init__(
             sim_model=get_asset_path(asset_path),
             robot_config=self.get_config_for_device(
