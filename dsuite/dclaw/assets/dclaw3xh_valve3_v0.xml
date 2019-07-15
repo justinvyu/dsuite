@@ -19,6 +19,12 @@
   <include file="../../../dsuite-scenes/dclaw/assets/dependencies3xh.xml"/>
   <include file="../../../dsuite-scenes/dclaw_stations/assets/dependencies.xml"/>
   <compiler meshdir="../../../dsuite-scenes/dclaw" texturedir="../../../dsuite-scenes/dclaw"/>
+  <asset>
+    <texture file='../scenes/textures/light-wood.png' type="2d" name="tex-light-wood"/>
+    <material name="light-wood" reflectance="0.5" texrepeat="15 15" texture="tex-light-wood" texuniform="true"/>
+    <material name="screw-material" shininess='0.6' specular='0.35'/>
+  </asset>
+
   <worldbody>
     <camera name="targeting" pos="1 1 2" mode="targetbodycom" target="dClaw"/>
     <camera name="object_target" pos="0 0 0.33" mode="targetbody" target="object"/>
@@ -30,8 +36,11 @@
     <body name="object" pos="0 0 0.0001">
       <include file="../../../dsuite-scenes/dclaw_stations/assets/valve3.xml"/>
     </body>
-    <body name="target" pos="0 0 0">
-      <site name="tmark" type="capsule" size=".003 0.04" pos=".04 0 0" rgba="0 1 0 1" euler="0 1.57 0"/>
+    <body name="valve_visual" pos="0 0 0.0001">
+      <include file="../../../dsuite-scenes/dclaw_stations/assets/valve3_free_visual.xml"/>
     </body>
+    <!-- <body name="target" pos="0 0 0"> -->
+    <!--   <site name="tmark" type="capsule" size=".003 0.04" pos=".04 0 0" rgba="0 1 0 1" euler="0 1.57 0"/> -->
+    <!-- </body> -->
   </worldbody>
 </mujoco>

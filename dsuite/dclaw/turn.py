@@ -169,7 +169,7 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         reward_dict = collections.OrderedDict((
             # Penalty for distance away from goal.
-            ('object_to_target_angle_dist_cost', -5 * object_to_target_angle_dist),
+            ('object_to_target_angle_dist_cost', - np.log(object_to_target_angle_dist + 1e-10)),
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
              -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)
@@ -219,8 +219,8 @@ class DClawTurnFixed(BaseDClawTurn):
 
     def __init__(self,
                  *args,
-                 init_object_pos_range=(0., 0.),
-                 target_pos_range=(np.pi, np.pi),
+                 init_object_pos_range=(-np.pi, np.pi),
+                 target_pos_range=(-np.pi, np.pi),
                  **kwargs):
         self._init_object_pos_range = init_object_pos_range
         self._target_pos_range = target_pos_range
@@ -273,6 +273,14 @@ class DClawTurnRandomResetSingleGoal(BaseDClawTurn):
         # Target position is at 0 degrees.
         self._set_target_object_pos(0)
         super()._reset()
+
+    def render(self, *args, **kwargs):
+        if self._camera_config is not None:
+            return self.image_service.get_image(*args, **kwargs)
+
+        raise ValueError(args, kwargs)
+        return super(DClawTurnRandomResetSingleGoal, self).render(
+            *args, **kwargs)
 
 
 @configurable(pickleable=True)
@@ -338,19 +346,65 @@ class DClawTurnImage(DClawTurnFixed):
         return obs_dict
 
 
+
 @configurable(pickleable=True)
 class DClawTurnResetFree(DClawTurnFixed):
-    def _reset(self):
-        self._set_target_object_pos(np.random.uniform(
-            low=self._target_pos_range[0],
-            high=self._target_pos_range[1]))
+    def __init__(self, reset_fingers=True, **kwargs):
+        super().__init__(**kwargs)
+        self._reset_fingers = reset_fingers
+    # def _reset(self):
+    #     self._initial_object_pos = np.random.uniform(
+    #             low=self._init_angle_range[0], high=self._init_angle_range[1])
+    #     print("ANGLE RANGE:", self._init_angle_range, "OBJECT POS:", self._initial_object_pos)
+    #     self._set_target_object_pos(
+    #             np.random.uniform(low=self._target_angle_range[0],
+    #                 high=self._target_angle_range[1]))
+    #     super()._reset()
 
     def reset(self):
         obs_dict = self.get_obs_dict()
-        for _ in range(15):
-            self._step(RESET_POSE)
-        self._reset()
-        return self._get_obs(obs_dict)
+        dclaw_config = self.robot.get_config('dclaw')
+        dclaw_control_mode = dclaw_config.control_mode
+        dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
+        if self._reset_fingers:
+            reset_action = self.robot.normalize_action(
+                {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
+
+            for _ in range(15):
+                self._step(reset_action)
+        dclaw_config.set_control_mode(dclaw_control_mode)
+        self._set_target_object_pos(self._sample_goal(obs_dict))
+        return self._get_obs(self.get_obs_dict())
+
+    def _sample_goal(self, obs_dict):
+        return np.pi
+
+
+@configurable(pickleable=True)
+class DClawTurnResetFreeSwapGoal(DClawTurnResetFree):
+    def __init__(self,
+                 **kwargs):
+        super().__init__(
+            **kwargs)
+        self._goal_index = 0
+        # self._goals = [(-0.06, -0.08, 0, 0, 0, 0), (-0.06, -0.08, 0, 0, 0, 0)]
+        self._goals = [np.pi/2, -np.pi/2]
+        self.n_goals = len(self._goals)
+
+    def _sample_goal(self, obs_dict):
+        self._goal_index = (self._goal_index + 1) % self.n_goals
+        return self._goals[self._goal_index]
+
+
+@configurable(pickleable=True)
+class DClawTurnResetFreeRandomGoal(DClawTurnResetFree):
+
+    def _current_goal(self):
+        return self._goal
+
+    def _sample_goal(self, obs_dict=None):
+        return np.random.uniform(-np.pi, np.pi)
+
 
 
 @configurable(pickleable=True)
