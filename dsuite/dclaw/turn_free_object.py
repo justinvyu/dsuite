@@ -580,6 +580,39 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
         return dones
 
 
+@configurable(pickleable=True)
+class DClawTurnFreeValve3ResetFreeSwapGoalEval(DClawTurnFreeValve3Fixed):
+    """Turns the object reset-free with a target position swapped every reset."""
+    def __init__(self,
+                 #observation_keys=DEFAULT_OBSERVATION_KEYS,
+                 **kwargs):
+        super().__init__(
+            #observation_keys=observation_keys + ('other_reward',),
+            **kwargs)
+        self._goal_index = 0
+        self._goals = [
+            (0.0, 0.0, 0, 0, 0, np.pi/2),
+            (-0.0, -0.0, 0, 0, 0, -np.pi/2)]
+            # (0.05, -0.05, 0, 0, 0, -np.pi/2),
+            # (-0.05, 0.05, 0, 0, 0, np.pi/2)]
+        self.n_goals = len(self._goals)
+
+    def _sample_goal(self, obs_dict):
+        self._goal_index = (self._goal_index + 1) % self.n_goals
+        return self._goals[self._goal_index]
+
+    def _reset(self):
+        lows, highs = list(zip(self._init_angle_range,
+                               self._init_x_pos_range,
+                               self._init_y_pos_range))
+        init_angle, x_pos, y_pos = np.random.uniform(
+            low=lows, high=highs
+        )
+        self._set_target_object_qpos(
+            self._sample_goal(self.get_obs_dict()))
+        self._initial_object_qpos = self._goals[(self._goal_index + 1) % 2]
+        super()._reset()
+
 
 @configurable(pickleable=True)
 class DClawTurnFreeValve3ResetFreeRandomGoal(DClawTurnFreeValve3ResetFree):

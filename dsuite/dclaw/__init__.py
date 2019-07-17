@@ -97,6 +97,10 @@ register(
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3FixedResetSwapGoal')
 
 register(
+    env_id='DClawTurnFreeValve3FixedResetSwapGoalEval-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3FixedResetSwapGoalEval')
+
+register(
     env_id='DClawTurnFreeValve3ResetFreeCurriculum-v0',
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3ResetFreeCurriculum')
 
