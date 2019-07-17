@@ -327,7 +327,7 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
     def _reset(self):
         self.robot.set_state({
             'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE,
-                qvel=np.zeros(self.action_space.shape[0]))
+                                qvel=np.zeros(self.action_space.shape[0]))
         })
 
     def render(self, *args, **kwargs):
@@ -464,6 +464,7 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
                  swap_goal_upon_completion: bool = True,
                  reset_fingers=True,
                  position_reward_weight=1,
+                 path_length: int = 50,
                  **kwargs):
         self._last_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
         self._last_object_position = np.array([0, 0, 0])
@@ -477,19 +478,17 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
         self._goal_index = 1
 
         self._position_reward_weight = position_reward_weight
+        self._path_length = path_length
+        self._step_count = 0
 
-    # def get_obs_dict(self) -> Dict[str, np.ndarray]:
-    #     """Returns the current observation of the environment.
+    def _step(self, action):
+        super()._step(action)
+        self._step_count += 1
 
-    #     Returns:
-    #         A dictionary of observation values. This should be an ordered
-    #         dictionary if `observation_keys` isn't set.
-    #     """
-    #     obs_dict = super().get_obs_dict()
-    #     self._last_claw_qpos = obs_dict['claw_qpos']
-    #     object_position = self._last_object_position = obs_dict['object_position']
-    #     self._last_object_orientation = obs_dict['object_orientation']
-    #     return obs_dict
+    def get_obs_dict(self) -> Dict[str, np.ndarray]:
+        obs_dict = super().get_obs_dict()
+        obs_dict['step_count'] = self._step_count
+        return obs_dict
 
     def _sample_goal(self, obs_dict):
         object_to_target_position_distance = obs_dict['object_to_target_position_distance']
@@ -517,6 +516,8 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
                 self._step(reset_action)
         self._set_target_object_qpos(self._sample_goal(obs_dict))
         dclaw_config.set_control_mode(dclaw_control_mode)
+
+        self._step_count = 0
         return self._get_obs(self.get_obs_dict())
 
 
@@ -573,6 +574,11 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
     def _sample_goal(self, obs_dict):
         self._goal_index = (self._goal_index + 1) % self.n_goals
         return self._goals[self._goal_index]
+
+    def get_done(self, obs_dict, rew_dict):
+        dones = (obs_dict['step_count']) == (self._path_length - 1)
+        return dones
+
 
 
 @configurable(pickleable=True)
