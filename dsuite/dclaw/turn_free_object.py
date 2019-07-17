@@ -576,7 +576,7 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
         return self._goals[self._goal_index]
 
     def get_done(self, obs_dict, rew_dict):
-        dones = (obs_dict['step_count']) == (self._path_length - 1)
+        dones = obs_dict['step_count'] == self._path_length
         return dones
 
 
