@@ -20,7 +20,7 @@ from typing import Any, Dict, Optional, Sequence
 import gym
 import numpy as np
 
-from dsuite.controllers.robot import DynamixelRobotController, RobotState
+from dsuite.components.robot import DynamixelRobotComponent, RobotState
 from dsuite.dclaw.config import (
     DCLAW_SIM_CONFIG, DCLAW_HARDWARE_CONFIG, DCLAW_OBJECT_SIM_CONFIG,
     DCLAW_FREE_OBJECT_SIM_CONFIG,
@@ -51,10 +51,10 @@ class BaseDClawEnv(RobotEnv, metaclass=abc.ABCMeta):
 
         Args:
             robot_config: A dictionary of keyword arguments to pass to
-                RobotController.
+                RobotComponent.
         """
         super().__init__(*args, **kwargs)
-        self.robot = self._add_controller(**robot_config)
+        self.robot = self._add_component(**robot_config)
 
     def initialize_action_space(self) -> gym.Space:
         """Returns the observation space to use for this environment."""
@@ -137,7 +137,7 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
             object_init_state.qvel
             if object_vel is None else np.atleast_1d(object_vel))
 
-        if not isinstance(self.robot, DynamixelRobotController):
+        if not isinstance(self.robot, DynamixelRobotComponent):
             self.robot.set_state({
                 'dclaw': RobotState(qpos=claw_pos, qvel=claw_vel),
                 'object': RobotState(qpos=object_pos, qvel=object_vel),

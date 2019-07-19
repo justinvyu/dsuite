@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Controller implementation for reading and writing data to/from robots.
+"""Component implementation for reading and writing data to/from robots.
 
 This abstracts differences between a MuJoCo simulation and a hardware robot.
 """
@@ -21,8 +21,8 @@ from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from dsuite.controllers.base import BaseController
-from dsuite.controllers.robot.config import ControlMode, RobotGroupConfig
+from dsuite.components.base import BaseComponent
+from dsuite.components.robot.config import ControlMode, RobotGroupConfig
 
 
 class RobotState:
@@ -45,8 +45,8 @@ class RobotState:
         self.qacc = qacc
 
 
-class RobotController(BaseController):
-    """Controller for reading sensor data and actuating robots."""
+class RobotComponent(BaseComponent):
+    """Component for reading sensor data and actuating robots."""
 
     @property
     def time(self) -> float:
@@ -57,7 +57,9 @@ class RobotController(BaseController):
         """Processes the configuration for a group."""
         return RobotGroupConfig(self.sim_scene, **config_kwargs)
 
-    def step(self, control_groups: Dict[str, np.ndarray]):
+    def step(self,
+             control_groups: Dict[str, np.ndarray],
+             denormalize: bool = True):
         """Runs one timestep of the robot for the given control.
 
         Examples:
@@ -68,6 +70,8 @@ class RobotController(BaseController):
                 control value to command the robot for a single timestep.
                 e.g. for a control group with position control, the control
                 value is an array of joint positions (in radians).
+            denormalize: If True, denormalizes the action from normalized action
+                space [-1, 1] to the robot's control space.
         """
         group_controls = []
         for group_name, control_values in control_groups.items():
@@ -78,7 +82,9 @@ class RobotController(BaseController):
                 continue
 
             # Denormalize and enforce action bounds.
-            control_values = self._denormalize_action(control_values, config)
+            if denormalize:
+                control_values = self._denormalize_action(
+                    control_values, config)
             control_values = self._apply_action_bounds(control_values, config)
 
             group_controls.append((config, control_values))

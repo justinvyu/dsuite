@@ -56,7 +56,7 @@ class CalibrationMap:
         """Adds or updates a Dynamixel group configuration.
 
         Args:
-            config: The controller configuration to update.
+            config: The component configuration to update.
             group_name: The name of the group.
             motor_ids: The motor IDs to create a group for.
             **group_kwargs: Additional configuration to set for the group.
@@ -71,7 +71,7 @@ class CalibrationMap:
         """Updates the calibration values for groups in the configuration.
 
         Args:
-            config: The controller configuration to update.
+            config: The component configuration to update.
             *group_names: One or more group names to update.
         """
         if 'groups' not in config:

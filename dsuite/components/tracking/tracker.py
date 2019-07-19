@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Controller implementation for interfacing with a Tracker."""
+"""Component implementation for interfacing with a Tracker."""
 
 import logging
 from typing import Dict, Optional, Sequence
@@ -20,7 +20,7 @@ from typing import Dict, Optional, Sequence
 import numpy as np
 from transforms3d.quaternions import mat2quat
 
-from dsuite.controllers.base import BaseController
+from dsuite.components.base import BaseComponent
 from dsuite.simulation.sim_scene import SimScene
 
 
@@ -42,13 +42,13 @@ class TrackerState:
 
 
 class TrackerGroupConfig:
-    """Group configuration for a TrackerController."""
+    """Group configuration for a TrackerComponent."""
 
     def __init__(self,
                  sim_scene: SimScene,
                  site_name: Optional[str] = None,
                  sim_observation_noise: Optional[float] = None):
-        """Initializes a group configuration for a TrackerController.
+        """Initializes a group configuration for a TrackerComponent.
 
         Args:
             sim_scene: The simulation, used for validation purposes.
@@ -63,8 +63,8 @@ class TrackerGroupConfig:
         self.sim_observation_noise = sim_observation_noise
 
 
-class TrackerController(BaseController):
-    """Controller for reading tracking data."""
+class TrackerComponent(BaseComponent):
+    """Component for reading tracking data."""
 
     def _process_group(self, **config_kwargs):
         """Processes the configuration for a group."""

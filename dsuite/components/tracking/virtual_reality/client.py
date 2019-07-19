@@ -26,8 +26,8 @@ from typing import Dict, Optional, List, Sequence, Union
 import numpy as np
 import openvr
 
-from dsuite.controllers.tracking.virtual_reality.device import VrDevice
-from dsuite.controllers.tracking.virtual_reality.poses import (
+from dsuite.components.tracking.virtual_reality.device import VrDevice
+from dsuite.components.tracking.virtual_reality.poses import (
     VrPoseBatch, VrCoordinateSystem)
 from dsuite.utils.math_utils import average_quaternions
 

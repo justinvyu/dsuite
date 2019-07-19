@@ -22,7 +22,7 @@ import openvr
 from transforms3d.euler import mat2euler
 from transforms3d.quaternions import mat2quat, qconjugate, qmult, quat2mat
 
-from dsuite.controllers.tracking.virtual_reality.device import VrDevice
+from dsuite.components.tracking.virtual_reality.device import VrDevice
 
 
 class VrCoordinateSystem:

@@ -23,7 +23,7 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 
-from dsuite.controllers.robot import RobotState
+from dsuite.components.robot import RobotState
 from dsuite.dclaw.base_env import BaseDClawEnv
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path

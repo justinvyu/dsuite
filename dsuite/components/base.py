@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Base API for Controllers.
+"""Base API for Components.
 
-A Controller provides a unified API between simulation and hardware.
+A Component provides a unified API between simulation and hardware.
 """
 
 import abc
@@ -31,8 +31,8 @@ GroupConfig = NewType('GroupConfig', Any)
 GroupState = NewType('GroupState', Any)
 
 
-class BaseController(abc.ABC):
-    """Base class for all controllers."""
+class BaseComponent(abc.ABC):
+    """Base class for all components."""
 
     def __init__(
             self,
@@ -40,7 +40,7 @@ class BaseController(abc.ABC):
             groups: Dict[str, Dict],
             random_state: Optional[np.random.RandomState] = None,
     ):
-        """Initializes a new controller.
+        """Initializes a new component.
 
         Args:
             sim_scene: The simulation to control.
@@ -68,7 +68,7 @@ class BaseController(abc.ABC):
             self.groups[group_name] = config
 
     def close(self):
-        """Cleans up any resources used by the controller."""
+        """Cleans up any resources used by the component."""
 
     def get_state(
             self,

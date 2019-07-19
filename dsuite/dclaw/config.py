@@ -16,7 +16,7 @@
 
 import numpy as np
 
-from dsuite.controllers.robot.dynamixel_utils import CalibrationMap
+from dsuite.components.robot.dynamixel_utils import CalibrationMap
 from dsuite.utils.config_utils import merge_configs
 from dsuite.controllers.robot.config import ControlMode
 
@@ -25,7 +25,7 @@ PI = np.pi
 
 # Base configuration for a DClaw robot in simulation.
 DCLAW_SIM_CONFIG = {
-    'class_path': 'dsuite.controllers.robot:RobotController',
+    'class_path': 'dsuite.components.robot:RobotComponent',
     'groups': {
         'dclaw': {
             'control_mode': ControlMode.JOINT_POSITION,
@@ -83,7 +83,7 @@ _FREE_OBJECT_SIM_CONFIG = {
 DCLAW_HARDWARE_CONFIG = merge_configs(
     DCLAW_SIM_CONFIG,
     {
-        'class_path': 'dsuite.controllers.robot:DynamixelRobotController',
+        'class_path': 'dsuite.components.robot:DynamixelRobotComponent',
         'groups': {
             'dclaw': {
                 'motor_ids': [10, 11, 12, 20, 21, 22, 30, 31, 32],

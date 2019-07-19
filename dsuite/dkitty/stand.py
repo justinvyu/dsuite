@@ -22,9 +22,7 @@ import collections
 from typing import Dict, Optional, Sequence, Union
 
 import numpy as np
-from transforms3d.euler import mat2euler
 
-from dsuite.controllers.tracking import TrackerState
 from dsuite.dkitty.base_env import BaseDKittyEnv
 from dsuite.simulation.randomize import SimRandomizer
 from dsuite.utils.configurable import configurable
@@ -44,7 +42,7 @@ DEFAULT_OBSERVATION_KEYS = (
 
 
 class BaseDKittyStand(BaseDKittyEnv, metaclass=abc.ABCMeta):
-    """Shared logic for DClaw turn tasks."""
+    """Shared logic for DKitty turn tasks."""
 
     def __init__(self,
                  asset_path: str = DKITTY_ASSET_PATH,
@@ -72,11 +70,6 @@ class BaseDKittyStand(BaseDKittyEnv, metaclass=abc.ABCMeta):
             frame_skip=frame_skip,
             **kwargs)
 
-        # Disable the constraint solver in hardware so that mimicked positions
-        # do not participate in contact calculations.
-        if self.has_hardware_robot:
-            self.sim_scene.disable_option(constraint_solver=True)
-
         self._last_action = np.zeros(12)
         self._desired_pose = np.zeros(12)
         self._initial_pose = np.zeros(12)
@@ -85,15 +78,10 @@ class BaseDKittyStand(BaseDKittyEnv, metaclass=abc.ABCMeta):
         """Resets the environment."""
         self._reset_dkitty_standing(kitty_pos=self._initial_pose,)
 
-        # For hardware tracking, reset the torso tracker as the world origin
-        # offset by the reset position.
-        if self.has_hardware_tracker:
-            self.tracker.set_state({'torso': TrackerState(pos=np.zeros(3))})
-
-        # Disable actuation and let the simulation settle.
+        # Let gravity pull the simulated robot to the ground before starting.
         if not self.has_hardware_robot:
-            with self.sim_scene.disable_option_context(actuation=True):
-                self.sim_scene.advance(100)
+            self.robot.step({'dkitty': self._initial_pose}, denormalize=False)
+            self.sim_scene.advance(100)
 
     def _step(self, action: np.ndarray):
         """Applies an action to the robot."""
@@ -112,18 +100,8 @@ class BaseDKittyStand(BaseDKittyEnv, metaclass=abc.ABCMeta):
         """
         root_sim_state, robot_state = self.robot.get_state(['root', 'dkitty'])
         torso_track_state = self.tracker.get_state('torso')
-
-        if self.has_hardware_tracker:
-            # Use hardware tracking as the root position and mimic back to sim.
-            root_qpos = np.concatenate(
-                [torso_track_state.pos,
-                 mat2euler(torso_track_state.rot)])
-            self.data.qpos[:6] = root_qpos
-            # TODO(michaelahn): Calculate angular velocity from tracking.
-            root_qvel = np.zeros(6)
-        else:
-            root_qpos = root_sim_state.qpos
-            root_qvel = root_sim_state.qvel
+        root_qpos, root_qvel = self._get_root_qpos_qvel(root_sim_state,
+                                                        torso_track_state)
 
         # Get the alignment of the torso's z-axis with the global z-axis.
         torso_upright = torso_track_state.rot[2, 2]
@@ -145,20 +123,18 @@ class BaseDKittyStand(BaseDKittyEnv, metaclass=abc.ABCMeta):
     ) -> Dict[str, np.ndarray]:
         """Returns the reward for the given action and observation."""
         pose_mean_error = np.abs(obs_dict['pose_error']).mean(axis=1)
-        xy_dist = np.linalg.norm(obs_dict['root_qpos'][:2])
         upright = obs_dict['upright']
 
         reward_dict = collections.OrderedDict((
             # Reward for closeness to desired pose.
             ('pose_error_cost', -4 * pose_mean_error),
             # Upright - 1 @ cos(0) to 0 @ cos(25deg).
-            ('upright', upright),
-            # Penalize being off-center.
-            ('xy_distance_cost', -xy_dist),
-            # Bonus when mean error < 20deg and upright within 30deg
-            ('bonus_small', 5 * (pose_mean_error < 0.35) * (upright > 0.866)),
-            # Bonus when mean error < 10deg and upright within 15deg.
-            ('bonus_big', 10 * (pose_mean_error < 0.17) * (upright > 0.966)),
+            ('upright', 2 * upright),
+            # Bonus when mean error < 30deg, scaled by uprightedness.
+            ('bonus_small', 5 * (pose_mean_error < (np.pi / 6)) * upright),
+            # Bonus when mean error < 15deg and upright within 30deg.
+            ('bonus_big',
+             10 * (pose_mean_error < (np.pi / 12)) * (upright > 0.9)),
         ))
         return reward_dict
 
@@ -168,10 +144,12 @@ class BaseDKittyStand(BaseDKittyEnv, metaclass=abc.ABCMeta):
             reward_dict: Dict[str, np.ndarray],
     ) -> Dict[str, np.ndarray]:
         """Returns a standardized measure of success for the environment."""
-        points = (
-            -np.abs(obs_dict['pose_error']).mean(axis=1) * obs_dict['upright'])
+        # Normalize pose error by 60deg.
+        pose_points = (1 - np.maximum(
+            np.abs(obs_dict['pose_error']).mean(axis=1) / (np.pi / 3), 1))
+
         return collections.OrderedDict((
-            ('points', points),
+            ('points', pose_points * obs_dict['upright']),
             ('success', reward_dict['bonus_big'] > 0.0),
         ))
 
@@ -199,7 +177,7 @@ class DKittyStandFixed(BaseDKittyStand):
 
 @configurable(pickleable=True)
 class DKittyStandRandom(BaseDKittyStand):
-    """Walk straight towards a random location."""
+    """Stand up from a random position."""
 
     def _reset(self):
         """Resets the environment."""
@@ -211,7 +189,7 @@ class DKittyStandRandom(BaseDKittyStand):
 
 @configurable(pickleable=True)
 class DKittyStandRandomDynamics(DKittyStandRandom):
-    """Walk straight towards a random location."""
+    """Stand up from a random positon with randomized dynamics."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -221,24 +199,33 @@ class DKittyStandRandomDynamics(DKittyStandRandom):
 
     def _reset(self):
         """Resets the environment."""
+        # Randomize joint dynamics.
         self._randomizer.randomize_dofs(
             self._dof_indices,
-            damping_range=(0.9, 1.1),
+            all_same=True,
+            damping_range=(0.1, 0.2),
             friction_loss_range=(0.001, 0.005),
         )
-        self._randomizer.randomize_geoms(
-            ['torso1'],
-            color_range=(0.2, 0.9),
+        self._randomizer.randomize_actuators(
+            all_same=True,
+            kp_range=(2, 4),
         )
         # Randomize friction on all geoms in the scene.
         self._randomizer.randomize_geoms(
+            all_same=True,
             friction_slide_range=(0.8, 1.2),
             friction_spin_range=(0.003, 0.007),
             friction_roll_range=(0.00005, 0.00015),
         )
+        # Generate a random height field.
         self._randomizer.randomize_global(
             total_mass_range=(1.6, 2.0),
             height_field_range=(0, 0.05),
         )
         self.sim_scene.upload_height_field(0)
+        # Randomize visuals.
+        self._randomizer.randomize_geoms(
+            ['torso1'],
+            color_range=(0.2, 0.9),
+        )
         super()._reset()

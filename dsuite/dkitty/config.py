@@ -16,7 +16,7 @@
 
 import numpy as np
 
-from dsuite.controllers.robot.dynamixel_utils import CalibrationMap
+from dsuite.components.robot.dynamixel_utils import CalibrationMap
 from dsuite.utils.config_utils import merge_configs
 
 # Convenience constants.
@@ -24,7 +24,7 @@ PI = np.pi
 
 # Base configuration for a DKitty robot in simulation.
 DKITTY_SIM_CONFIG = {
-    'class_path': 'dsuite.controllers.robot:RobotController',
+    'class_path': 'dsuite.components.robot:RobotComponent',
     'groups': {
         'root': {
             'qpos_indices': range(6),
@@ -52,7 +52,7 @@ DKITTY_SIM_CONFIG = {
 DKITTY_HARDWARE_CONFIG = merge_configs(
     DKITTY_SIM_CONFIG,
     {
-        'class_path': 'dsuite.controllers.robot:DynamixelRobotController',
+        'class_path': 'dsuite.components.robot:DynamixelRobotComponent',
         'groups': {
             'dkitty': {
                 'motor_ids': [10, 11, 12, 40, 41, 42, 20, 21, 22, 30, 31, 32],
@@ -63,7 +63,7 @@ DKITTY_HARDWARE_CONFIG = merge_configs(
 
 # Base configuration for tracking in simulation.
 TRACKER_SIM_CONFIG = {
-    'class_path': 'dsuite.controllers.tracking:TrackerController',
+    'class_path': 'dsuite.components.tracking:TrackerComponent',
     'groups': {
         'target': {
             'site_name': 'target',
@@ -82,7 +82,7 @@ TRACKER_SIM_CONFIG = {
 TRACKER_HARDWARE_CONFIG = merge_configs(
     TRACKER_SIM_CONFIG,
     {
-        'class_path': 'dsuite.controllers.tracking:VrTrackerController',
+        'class_path': 'dsuite.components.tracking:VrTrackerComponent',
         'groups': {
             'target': {
                 'mimic_in_sim': True,

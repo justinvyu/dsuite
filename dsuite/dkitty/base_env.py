@@ -15,18 +15,22 @@
 """Shared logic for all DKitty environments."""
 
 import abc
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 import gym
 import numpy as np
+from transforms3d.euler import euler2mat, mat2euler
 
-from dsuite.controllers.robot import DynamixelRobotController, RobotState
-from dsuite.controllers.tracking import VrTrackerController
+from dsuite.components.robot import DynamixelRobotComponent, RobotState
+from dsuite.components.tracking import VrTrackerComponent, TrackerState
 from dsuite.dkitty.config import (
     DEFAULT_DKITTY_CALIBRATION_MAP, DKITTY_SIM_CONFIG, DKITTY_HARDWARE_CONFIG,
     TRACKER_SIM_CONFIG, TRACKER_HARDWARE_CONFIG)
-from dsuite.dkitty import hardware_reset
+from dsuite.dkitty import scripted_reset
 from dsuite.robot_env import make_box_space, RobotEnv
+
+# The position offset for tracking in hardware.
+KITTY_HW_TRACKER_OFFSET = np.array([0, 0, 0.35])
 
 
 class BaseDKittyEnv(RobotEnv, metaclass=abc.ABCMeta):
@@ -39,7 +43,7 @@ class BaseDKittyEnv(RobotEnv, metaclass=abc.ABCMeta):
         if device_path is not None:
             config = DKITTY_HARDWARE_CONFIG.copy()
             config['device_path'] = device_path
-            hardware_reset.add_groups_for_reset(config['groups'])
+            scripted_reset.add_groups_for_reset(config['groups'])
             # Calibrate the configuration groups.
             DEFAULT_DKITTY_CALIBRATION_MAP.update_group_configs(config)
         else:
@@ -63,29 +67,41 @@ class BaseDKittyEnv(RobotEnv, metaclass=abc.ABCMeta):
             config = TRACKER_SIM_CONFIG
         return config
 
-    def __init__(self, *args, robot_config: Dict[str, Any],
-                 tracker_config: Dict[str, Any], **kwargs):
+    def __init__(self,
+                 *args,
+                 robot_config: Dict[str, Any],
+                 tracker_config: Dict[str, Any],
+                 manual_reset: bool = False,
+                 **kwargs):
         """Initializes the environment.
 
         Args:
             robot_config: A dictionary of keyword arguments to pass to
-                RobotController.
+                RobotComponent.
             tracker_config: A dictionary of keyword arguments to pass to
-                TrackerController.
+                TrackerComponent.
+            manual_reset: If True, waits for the user to reset the robot
+                instead of performing the automatic reset procedure.
         """
         super().__init__(*args, **kwargs)
-        self.robot = self._add_controller(**robot_config)
-        self.tracker = self._add_controller(**tracker_config)
+        self.robot = self._add_component(**robot_config)
+        self.tracker = self._add_component(**tracker_config)
+        self.manual_reset = manual_reset
+
+        # Disable the constraint solver in hardware so that mimicked positions
+        # do not participate in contact calculations.
+        if self.has_hardware_robot:
+            self.sim_scene.disable_option(constraint_solver=True)
 
     @property
     def has_hardware_robot(self) -> bool:
         """Returns true if the environment is using a hardware robot."""
-        return isinstance(self.robot, DynamixelRobotController)
+        return isinstance(self.robot, DynamixelRobotComponent)
 
     @property
     def has_hardware_tracker(self) -> bool:
         """Returns true if the environment is using a hardware tracker."""
-        return isinstance(self.tracker, VrTrackerController)
+        return isinstance(self.tracker, VrTrackerComponent)
 
     def initialize_action_space(self) -> gym.Space:
         """Returns the observation space to use for this environment."""
@@ -120,17 +136,57 @@ class BaseDKittyEnv(RobotEnv, metaclass=abc.ABCMeta):
             kitty_init_state.qvel
             if kitty_vel is None else np.asarray(kitty_vel))
 
-        if not isinstance(self.robot, DynamixelRobotController):
+        # For simulation, simply set the state.
+        if not isinstance(self.robot, DynamixelRobotComponent):
             self.robot.set_state({
                 'root': RobotState(qpos=root_pos, qvel=root_vel),
                 'dkitty': RobotState(qpos=kitty_pos, qvel=kitty_vel),
             })
-        else:
-            # Reset to a standing position.
-            hardware_reset.reset_standup(self.robot)
+            return
 
-            # Move to the desired position.
-            self.robot.set_state({
-                'dkitty': RobotState(qpos=kitty_pos, qvel=kitty_vel),
-            })
-            self.robot.reset_time()
+        # Perform the scripted reset if we're not doing manual resets.
+        if not self.manual_reset:
+            scripted_reset.reset_standup(self.robot)
+
+        # Move to the desired position.
+        self.robot.set_state({
+            'dkitty': RobotState(qpos=kitty_pos, qvel=kitty_vel),
+        })
+        if self.manual_reset:
+            # Prompt the user to start the episode.
+            input('Press Enter to start the episode...')
+
+        # Reset the hardware tracking position to consider the current world
+        # position of the D'Kitty as the desired reset position.
+        if self.has_hardware_tracker:
+            self.tracker.set_state({
+                'torso': TrackerState(
+                    pos=root_pos[:3] + KITTY_HW_TRACKER_OFFSET,
+                    rot=euler2mat(*root_pos[3:6]),
+                )
+            },)
+        self.robot.reset_time()
+
+    def _get_root_qpos_qvel(
+            self,
+            root_robot_state: RobotState,
+            torso_tracker_state: TrackerState,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Returns the root position and velocity of the robot.
+
+        This is needed because we use a free joint to track the D'Kitty position
+        for simulation, but we use a site tracker for hardware.
+        """
+        if self.has_hardware_tracker:
+            # Use hardware tracking as the root position and mimic back to sim.
+            root_qpos = np.concatenate([
+                torso_tracker_state.pos - KITTY_HW_TRACKER_OFFSET,
+                mat2euler(torso_tracker_state.rot),
+            ])
+            self.data.qpos[:6] = root_qpos
+            # TODO(michaelahn): Calculate angular velocity from tracking.
+            root_qvel = np.zeros(6)
+        else:
+            root_qpos = root_robot_state.qpos
+            root_qvel = root_robot_state.qvel
+        return root_qpos, root_qvel

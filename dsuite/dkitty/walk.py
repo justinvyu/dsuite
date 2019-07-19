@@ -22,9 +22,8 @@ import collections
 from typing import Dict, Optional, Sequence, Union
 
 import numpy as np
-from transforms3d.euler import mat2euler
 
-from dsuite.controllers.tracking import TrackerState
+from dsuite.components.tracking import TrackerState
 from dsuite.dkitty.base_env import BaseDKittyEnv
 from dsuite.simulation.randomize import SimRandomizer
 from dsuite.utils.configurable import configurable
@@ -45,7 +44,7 @@ DEFAULT_OBSERVATION_KEYS = (
 
 
 class BaseDKittyWalk(BaseDKittyEnv, metaclass=abc.ABCMeta):
-    """Shared logic for DClaw turn tasks."""
+    """Shared logic for DKitty walk tasks."""
 
     def __init__(self,
                  asset_path: str = DKITTY_ASSET_PATH,
@@ -87,11 +86,6 @@ class BaseDKittyWalk(BaseDKittyEnv, metaclass=abc.ABCMeta):
             frame_skip=frame_skip,
             **kwargs)
 
-        # Disable the constraint solver in hardware so that mimicked positions
-        # do not participate in contact calculations.
-        if self.has_hardware_robot:
-            self.sim_scene.disable_option(constraint_solver=True)
-
         self._last_action = np.zeros(12)
         self._initial_target_pos = np.zeros(3)
         self._initial_heading_pos = None
@@ -107,15 +101,11 @@ class BaseDKittyWalk(BaseDKittyEnv, metaclass=abc.ABCMeta):
         if heading_pos is None:
             heading_pos = target_pos
 
-        tracker_states = {
+        # Set the tracker locations.
+        self.tracker.set_state({
             'target': TrackerState(pos=target_pos),
             'heading': TrackerState(pos=heading_pos),
-        }
-        # For hardware tracking, reset the torso tracker as the world origin
-        # offset by the reset position.
-        if self.has_hardware_tracker:
-            tracker_states['torso'] = TrackerState(pos=root_reset_pos[:3])
-        self.tracker.set_state(tracker_states)
+        })
 
     def _step(self, action: np.ndarray):
         """Applies an action to the robot."""
@@ -135,18 +125,8 @@ class BaseDKittyWalk(BaseDKittyEnv, metaclass=abc.ABCMeta):
         root_sim_state, robot_state = self.robot.get_state(['root', 'dkitty'])
         target_state, heading_state, torso_track_state = self.tracker.get_state(
             ['target', 'heading', 'torso'])
-
-        if self.has_hardware_tracker:
-            # Use hardware tracking as the root position and mimic back to sim.
-            root_qpos = np.concatenate(
-                [torso_track_state.pos,
-                 mat2euler(torso_track_state.rot)])
-            self.data.qpos[:6] = root_qpos
-            # TODO(michaelahn): Calculate angular velocity from tracking.
-            root_qvel = np.zeros(6)
-        else:
-            root_qpos = root_sim_state.qpos
-            root_qvel = root_sim_state.qvel
+        root_qpos, root_qvel = self._get_root_qpos_qvel(root_sim_state,
+                                                        torso_track_state)
 
         target_xy = target_state.pos[:2]
         kitty_xy = torso_track_state.pos[:2]
@@ -220,8 +200,8 @@ class BaseDKittyWalk(BaseDKittyEnv, metaclass=abc.ABCMeta):
             reward_dict: Dict[str, np.ndarray],
     ) -> np.ndarray:
         """Returns whether the episode should terminate."""
-        # Terminate the episode if more than ~25deg misaligned with z-axis.
-        return obs_dict['upright'] < 0.9
+        # Terminate the episode if more than ~45deg misaligned with z-axis.
+        return obs_dict['upright'] < 0.707
 
 
 @configurable(pickleable=True)
@@ -264,24 +244,33 @@ class DKittyWalkRandomDynamics(DKittyWalkRandom):
 
     def _reset(self):
         """Resets the environment."""
+        # Randomize joint dynamics.
         self._randomizer.randomize_dofs(
             self._dof_indices,
-            damping_range=(0.9, 1.1),
+            all_same=True,
+            damping_range=(0.1, 0.2),
             friction_loss_range=(0.001, 0.005),
         )
-        self._randomizer.randomize_geoms(
-            ['torso1'],
-            color_range=(0.2, 0.9),
+        self._randomizer.randomize_actuators(
+            all_same=True,
+            kp_range=(2, 4),
         )
         # Randomize friction on all geoms in the scene.
         self._randomizer.randomize_geoms(
+            all_same=True,
             friction_slide_range=(0.8, 1.2),
             friction_spin_range=(0.003, 0.007),
             friction_roll_range=(0.00005, 0.00015),
         )
+        # Generate a random height field.
         self._randomizer.randomize_global(
             total_mass_range=(1.6, 2.0),
             height_field_range=(0, 0.05),
         )
         self.sim_scene.upload_height_field(0)
+        # Randomize visuals.
+        self._randomizer.randomize_geoms(
+            ['torso1'],
+            color_range=(0.2, 0.9),
+        )
         super()._reset()
