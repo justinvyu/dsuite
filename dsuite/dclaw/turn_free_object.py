@@ -18,7 +18,9 @@ This is a single rotation of an object from an initial angle to a target angle.
 """
 
 import os
-import glob, gzip, pickle
+import glob
+import gzip
+import pickle
 import abc
 import collections
 from typing import Dict, Optional, Sequence
@@ -33,8 +35,8 @@ from dsuite.dclaw.turn import get_image_service
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance
-from dsuite.controllers.robot.config import ControlMode
-from dsuite.controllers.robot import RobotState
+from dsuite.components.robot.config import ControlMode
+from dsuite.components.robot import RobotState
 
 
 # The observation keys that are concatenated as the environment observation.

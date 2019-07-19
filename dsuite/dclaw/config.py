@@ -17,8 +17,8 @@
 import numpy as np
 
 from dsuite.components.robot.dynamixel_utils import CalibrationMap
+from dsuite.components.robot.config import ControlMode
 from dsuite.utils.config_utils import merge_configs
-from dsuite.controllers.robot.config import ControlMode
 
 # Convenience constants.
 PI = np.pi
