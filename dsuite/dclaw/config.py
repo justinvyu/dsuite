@@ -29,11 +29,11 @@ DCLAW_SIM_CONFIG = {
     'groups': {
         'dclaw': {
             'control_mode': ControlMode.JOINT_POSITION,
-            'actuator_delta_range': [
-                (-np.pi/8, np.pi/8),
-                (-np.pi/6, np.pi/6),
-                (-np.pi/4, np.pi/4),
-            ] * 3,
+            # 'actuator_delta_range': [
+            #     (-np.pi/8, np.pi/8),
+            #     (-np.pi/6, np.pi/6),
+            #     (-np.pi/4, np.pi/4),
+            # ] * 3,
             'qpos_indices': range(9),
             'qpos_range': [
                 (-PI / 4, PI / 4),  # 45 degrees for top servos.
