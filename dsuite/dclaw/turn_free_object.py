@@ -604,14 +604,6 @@ class DClawTurnFreeValve3ResetFreeSwapGoalEval(DClawTurnFreeValve3Fixed):
         return self._goals[self._goal_index]
 
     def _reset(self):
-        lows, highs = list(zip(self._init_angle_range,
-                               self._init_x_pos_range,
-                               self._init_y_pos_range))
-        init_angle, x_pos, y_pos = np.random.uniform(
-            low=lows, high=highs
-        )
-        self._set_target_object_qpos(
-            self._sample_goal(self.get_obs_dict()))
         self._initial_object_qpos = self._goals[(self._goal_index + 1) % 2]
         super()._reset()
 
