@@ -34,13 +34,15 @@ import pickle
 
 try:
     from dsuite.utils import kinect_image_service
-except ImportError:
-    pass
+except ImportError as e:
+    if "cannot import name 'kinect_image_service'" not in e.msg:
+        raise
 
 try:
     from dsuite.utils import logitech_image_service
-except ImportError:
-    pass
+except ImportError as e:
+    if "cannot import name 'logitech_image_service'" not in e.msg:
+        raise
 
 
 IMAGE_SERVICE = None
