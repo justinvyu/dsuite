@@ -31,7 +31,6 @@ from transforms3d.euler import euler2quat
 from dsuite.dclaw.base_env import (BaseDClawObjectEnv,
                                    BaseDClawEnv,
                                    DEFAULT_CLAW_RESET_POSE)
-from dsuite.dclaw.turn import get_image_service
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance
@@ -294,6 +293,7 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
            **kwargs)
         self._camera_config = camera_config
         if camera_config:
+            from dsuite.dclaw.turn import get_image_service
             self._image_service = get_image_service(**camera_config)
         self._last_action = np.zeros(self.action_space.shape[0])
 
