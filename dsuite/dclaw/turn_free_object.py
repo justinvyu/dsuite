@@ -528,22 +528,13 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
     """Turns the object reset-free with a target position swapped every reset."""
     def __init__(self,
                  #observation_keys=DEFAULT_OBSERVATION_KEYS,
+                 goals=((0, 0, 0, 0, 0, np.pi/2), (0, 0, 0, 0, 0, -np.pi/2)),
                  **kwargs):
         super().__init__(
             #observation_keys=observation_keys + ('other_reward',),
             **kwargs)
         self._goal_index = 0
-        # self._goals = [(-0.06, -0.08, 0, 0, 0, 0), (-0.06, -0.08, 0, 0, 0, 0)]
-        self._goals = [
-            (0.05, 0.05, 0, 0, 0, np.pi/2),
-            (-0.05, -0.05, 0, 0, 0, -np.pi/2)]
-            # (0.05, -0.05, 0, 0, 0, -np.pi/2),
-            # (-0.05, 0.05, 0, 0, 0, np.pi/2)]
-        self._goals = [
-            (0.0, 0.0, 0, 0, 0, np.pi/2),
-            (-0.0, -0.0, 0, 0, 0, -np.pi/2)]
-            # (0.05, -0.05, 0, 0, 0, -np.pi/2),
-            # (-0.05, 0.05, 0, 0, 0, np.pi/2)]
+        self._goals = np.array(goals)
         self.n_goals = len(self._goals)
 
     def get_obs_dict(self):
@@ -565,11 +556,15 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
         )
 
         if goal_angle == self._goals[0][5]:
-            path['observations']['target_orientation_sin'][:, 2] = np.sin(self._goals[1][5])
-            path['observations']['target_orientation_cos'][:, 2] = np.cos(self._goals[1][5])
+            path['observations']['target_orientation_sin'][:, 2] = (
+                np.sin(self._goals[1][5]))
+            path['observations']['target_orientation_cos'][:, 2] = (
+                np.cos(self._goals[1][5]))
         elif goal_angle == self._goals[1][5]:
-            path['observations']['target_orientation_sin'][:, 2] = np.sin(self._goals[0][5])
-            path['observations']['target_orientation_cos'][:, 2] = np.cos(self._goals[0][5])
+            path['observations']['target_orientation_sin'][:, 2] = (
+                np.sin(self._goals[0][5]))
+            path['observations']['target_orientation_cos'][:, 2] = (
+                np.cos(self._goals[0][5]))
         path['rewards'] = path['observations']['other_reward']
         return path
 
