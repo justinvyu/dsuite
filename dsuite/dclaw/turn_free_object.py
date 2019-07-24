@@ -344,11 +344,12 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
     """Turns the object with a fixed initial and fixed target position."""
 
     def __init__(self,
+                 *args, 
                  init_angle_range=(0, 0),
                  target_angle_range=(np.pi, np.pi),
                  init_x_pos_range=(0, 0),
                  init_y_pos_range=(0, 0),
-                 *args, **kwargs):
+                 **kwargs):
         self._init_angle_range = init_angle_range
         self._target_angle_range = target_angle_range
         self._init_x_pos_range = init_x_pos_range
@@ -459,7 +460,7 @@ class DClawTurnFreeValve3RandomReset(BaseDClawTurnFreeObject):
 
 
 @configurable(pickleable=True)
-class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
+class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
     """Turns the object reset-free with a fixed initial and varied target positions."""
 
     def __init__(self,
@@ -478,6 +479,7 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
         # self._goals = [(-0.06, -0.08, 0, 0, 0, 0), (-0.06, -0.08, 0, 0, 0, 0)]
         self._goals = ((0, 0, 0, 0, 0, np.pi), (0, 0, 0, 0, 0, np.pi))
         self._goal_index = 1
+        self._initial_reset = False
 
         self._position_reward_weight = position_reward_weight
         self._path_length = path_length
@@ -499,10 +501,10 @@ class DClawTurnFreeValve3ResetFree(BaseDClawTurnFreeObject):
            object_to_target_orientation_distance < 0.1 and \
            object_to_target_position_distance < 0.01:
             self._goal_index = np.mod(self._goal_index + 1, 2)
+            goal = self._goals[self._goal_index]
         else:
             goal = (0, 0, 0, 0, 0, np.pi)
 
-        goal = self._goals[self._goal_index]
         return goal
 
     def reset(self):
@@ -533,17 +535,14 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
             #observation_keys=observation_keys + ('other_reward',),
             **kwargs)
         self._goal_index = 0
-        # self._goals = [(-0.06, -0.08, 0, 0, 0, 0), (-0.06, -0.08, 0, 0, 0, 0)]
         self._goals = [
-            (0.05, 0.05, 0, 0, 0, np.pi/2),
-            (-0.05, -0.05, 0, 0, 0, -np.pi/2)]
+            # (0.0, 0.0, 0, 0, 0, np.pi/2),
+            # (-0.0, -0.0, 0, 0, 0, -np.pi/2)
+            (0.01, 0.01, 0, 0, 0, np.pi / 2),
+            (-0.01, -0.01, 0, 0, 0, -np.pi / 2)
             # (0.05, -0.05, 0, 0, 0, -np.pi/2),
-            # (-0.05, 0.05, 0, 0, 0, np.pi/2)]
-        self._goals = [
-            (0.0, 0.0, 0, 0, 0, np.pi/2),
-            (-0.0, -0.0, 0, 0, 0, -np.pi/2)]
-            # (0.05, -0.05, 0, 0, 0, -np.pi/2),
-            # (-0.05, 0.05, 0, 0, 0, np.pi/2)]
+            # (-0.05, 0.05, 0, 0, 0, np.pi/2)
+        ]
         self.n_goals = len(self._goals)
 
     def get_obs_dict(self):
@@ -576,11 +575,7 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
     def _sample_goal(self, obs_dict):
         self._goal_index = (self._goal_index + 1) % self.n_goals
         return self._goals[self._goal_index]
-
-    def get_done(self, obs_dict, rew_dict):
-        dones = obs_dict['step_count'] == self._path_length
-        return dones
-
+ 
 
 @configurable(pickleable=True)
 class DClawTurnFreeValve3ResetFreeSwapGoalEval(DClawTurnFreeValve3Fixed):
@@ -755,9 +750,6 @@ class DClawTurnFreeValve3ResetFreeCurriculumEval(DClawTurnFreeValve3Fixed):
             object_vel=np.atleast_1d(self._initial_object_qvel),
             # guide_pos=np.atleast_1d(self._object_target_qpos))
         )
-
-
-
         self._set_target_object_qpos(self._sample_goal_qpos(obs_dict))
         return self._get_obs(self.get_obs_dict())
 
@@ -783,6 +775,134 @@ class DClawTurnFreeValve3Image(DClawTurnFreeValve3Fixed):
         obs['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
         return obs
 
+# TODO: Merge with Henry's reset-free code, lots of redundancy right now
+@configurable(pickleable=True)
+class DClawTurnFreeValve3MultiGoal(DClawTurnFreeValve3Fixed):
+    def __init__(
+            self,
+            *args,
+            goals = False,
+            goal_completion_position_threshold: float = 0.05,
+            goal_completion_orientation_threshold: float = 0.15,
+            initial_goal_index: int = 0,
+            use_concatenated_goal: bool = False,
+            swap_goals_upon_completion: bool = True,
+            reset_claw: bool = True,
+            reset_free: bool = False,
+            observation_keys = DEFAULT_OBSERVATION_KEYS + ('goal_index',),
+            goal_collection: bool = False,
+            random_goal_sampling: bool = False,
+            one_hot_goal_index: bool = False,
+            **kwargs):
+        super().__init__(*args, observation_keys=observation_keys, **kwargs)
+        self._goals = goals
+        self._num_goals = len(goals)
+        self._goal_index = initial_goal_index
+
+        self._num_goal_switches = 0
+
+        self._goal_completion_position_threshold = goal_completion_position_threshold
+        self._goal_completion_orientation_threshold = goal_completion_orientation_threshold
+        self._swap_goals_upon_completion = swap_goals_upon_completion
+
+        self._reset_claw = reset_claw
+        self._reset_free = reset_free
+        self._initial_reset = False
+        self._goal_collection = goal_collection
+        self._random_goal_sampling = random_goal_sampling
+        self._one_hot_goal_index = one_hot_goal_index
+        self._reset()
+
+    def get_obs_dict(self):
+        obs_dict = super().get_obs_dict()
+
+        # Log some other metrics with multigoal
+        obs_dict['num_goal_switches'] = np.array([self._num_goal_switches])
+        if self._one_hot_goal_index:
+            goal_index = np.zeros(self._num_goals)
+            goal_index[self._goal_index] = 1
+        else:
+            goal_index = np.array([self._goal_index])
+        obs_dict['goal_index'] = goal_index
+
+        return obs_dict
+
+    def _reset(self):
+        if self._goal_collection:
+            super()._reset()
+        elif self._reset_free and self._initial_reset:
+            self._set_target_object_qpos(self._goals[self._goal_index])
+        else:
+            self._initial_reset = True
+            # If multigoal with resets, change the init
+            target_angle = self._goals[self._goal_index][-1]
+            init_angle = self._goals[1 - self._goal_index][-1]
+            self._init_angle_range = (init_angle, init_angle)
+            self._target_angle_range = (target_angle, target_angle)
+            super()._reset()
+
+    def render(self, mode='human', **kwargs):
+        if mode == 'human':
+            return super().render(mode=mode, **kwargs)
+        elif mode == 'rgb_array':
+            img_obs = super().render(
+                    mode=mode,
+                    **kwargs)
+#            if self._use_concatenated_goal:
+#                # Concatenated by the channels.
+#                img_obs = np.concatenate([normalized, self._goal_image], axis=2)
+            return img_obs
+        else:
+            raise NotImplementedError
+
+    def get_goal_completion(self):
+        obs_dict = self.get_obs_dict()
+        object_target_circle_dist = obs_dict['object_to_target_circle_distance']
+        object_target_position_dist = obs_dict['object_to_target_position_distance']
+        return object_target_circle_dist < self._goal_completion_orientation_threshold \
+                and object_target_position_dist < self._goal_completion_position_threshold
+
+    def reset(self):
+        obs_dict = self.get_obs_dict()
+        dclaw_config = self.robot.get_config('dclaw')
+        dclaw_control_mode = dclaw_config.control_mode
+        dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
+        if self._reset_claw:
+            reset_action = self.robot.normalize_action(
+                {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
+
+            for _ in range(15):
+                self._step(reset_action)
+        if self._swap_goals_upon_completion:
+            if self.get_goal_completion():
+                self.switch_goal()
+            # else:
+            #     self.sample_goal_image()
+        else:
+            # Sample new goal at every reset if multigoal with resets.
+            self.switch_goal(random=self._random_goal_sampling)
+        self._reset()
+        dclaw_config.set_control_mode(dclaw_control_mode)
+        return self._get_obs(self.get_obs_dict())
+
+    def set_goal(self):
+        self._set_target_object_qpos(self._goals[self._goal_index])
+#        if self._use_concatenated_goal:
+#            self._goal_image = self.sample_goal_image()
+
+    def switch_goal(self, random=False):
+        if random:
+            self._goal_index = np.random.randint(low=0, high=self._num_goals)
+        else:
+            self._goal_index = np.mod(self._goal_index + 1, self._num_goals)
+        self._num_goal_switches += 1
+        self.set_goal()
+
+
+@configurable(pickleable=True)
+class DClawTurnFreeValve3MultiGoalResetFree(DClawTurnFreeValve3MultiGoal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, reset_free=True, **kwargs)
 
 # @configurable(pickleable=True)
 # class DClawTurnFreeObjectRandom(BaseDClawTurnFreeObject):

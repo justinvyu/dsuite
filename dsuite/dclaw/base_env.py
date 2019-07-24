@@ -24,11 +24,12 @@ from dsuite.components.robot import DynamixelRobotComponent, RobotState
 from dsuite.dclaw.config import (
     DCLAW_SIM_CONFIG, DCLAW_HARDWARE_CONFIG, DCLAW_OBJECT_SIM_CONFIG,
     DCLAW_FREE_OBJECT_SIM_CONFIG,
+    # FREE_DCLAW_FREE_OBJECT_SIM_CONFIG,
     DCLAW_OBJECT_HARDWARE_CONFIG,
     DCLAW_OBJECT_GUIDE_HARDWARE_CONFIG,
     DEFAULT_DCLAW_CALIBRATION_MAP)
 from dsuite.robot_env import make_box_space, RobotEnv
-DEFAULT_CLAW_RESET_POSE = np.array([0, -np.pi/3, np.pi/3]*3)
+DEFAULT_CLAW_RESET_POSE = np.array([0, -np.pi / 3, np.pi / 3] * 3)
 
 class BaseDClawEnv(RobotEnv, metaclass=abc.ABCMeta):
     """Base environment for all DClaw robot tasks."""

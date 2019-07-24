@@ -32,23 +32,21 @@ from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance
 import pickle
 
-try:
-    from dsuite.utils import kinect_image_service
-except ImportError as e:
-    if "cannot import name 'kinect_image_service'" not in e.msg:
-        raise
-
-try:
-    from dsuite.utils import logitech_image_service
-except ImportError as e:
-    if "cannot import name 'logitech_image_service'" not in e.msg:
-        raise
-
-
 IMAGE_SERVICE = None
 
-
 def get_image_service(*args, topic, **kwargs):
+    try:
+        from dsuite.utils import kinect_image_service
+    except ImportError as e:
+        if "cannot import name 'kinect_image_service'" not in e.msg:
+            raise
+
+    try:
+        from dsuite.utils import logitech_image_service
+    except ImportError as e:
+        if "cannot import name 'logitech_image_service'" not in e.msg:
+            raise
+
     global IMAGE_SERVICE
     if IMAGE_SERVICE is None:
         print("CREATING NEW IMAGE_SERVICE")
@@ -71,7 +69,7 @@ DEFAULT_OBSERVATION_KEYS = (
 )
 
 # Reset pose for the claw joints.
-RESET_POSE = np.array([0, -np.pi / 3, np.pi / 3] * 3)
+DEFAULT_CLAW_RESET_POSE = np.array([0., -np.pi / 3, np.pi / 3] * 3)
 
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_v0.xml'
 
@@ -506,6 +504,8 @@ class DClawTurnMultiGoal(DClawTurnFixed):
                  reset_free: bool = False,
                  observation_keys = DEFAULT_OBSERVATION_KEYS + ('goal_index',),
                  goal_collection: bool = False,
+                 random_goal_sampling: bool = False,
+                 one_hot_goal_index: bool = False,
                  **kwargs):
         super().__init__(*args, observation_keys=observation_keys, **kwargs)
 
@@ -537,6 +537,8 @@ class DClawTurnMultiGoal(DClawTurnFixed):
         # reset to the _init_object_pos_range on the first reset
         self._initial_reset = False
         self._goal_collection = goal_collection
+        self._random_goal_sampling = random_goal_sampling
+        self._one_hot_goal_index = one_hot_goal_index
         self._reset()
 
         self._num_goal_switches = 0
@@ -546,12 +548,21 @@ class DClawTurnMultiGoal(DClawTurnFixed):
 
          # Log some other metrics with multigoal
         obs_dict['num_goal_switches'] = np.array([self._num_goal_switches])
-        obs_dict['goal_index'] = np.array([self._goal_index])
+        if self._one_hot_goal_index:
+            goal_index_obs = np.zeros(self._num_goals).astype(np.float32)
+            goal_index_obs[self._goal_index] = 1 
+        else:
+            goal_index_obs = np.array([self._goal_index])
+
+        obs_dict['goal_index'] = goal_index_obs
 
         return obs_dict
 
     def _reset(self):
         if self._goal_collection:
+            self._set_target_object_pos(self._goals[self._goal_index]) 
+            print(self._goals[self._goal_index], self._target_object_pos)
+            print(self._init_object_pos_range, self._target_object_pos)
             super()._reset()
         elif self._reset_free and self._initial_reset:
             self._set_target_object_pos(self._goals[self._goal_index])
@@ -571,12 +582,10 @@ class DClawTurnMultiGoal(DClawTurnFixed):
             img_obs = super().render(
                     mode=mode,
                     **kwargs)
-            # TODO: Move normalization into PixelObservationWrapper
-            normalized = ((2.0 / 255.0) * img_obs - 1.0)
             if self._use_concatenated_goal:
                 # Concatenated by the channels.
-                normalized = np.concatenate([normalized, self._goal_image], axis=2)
-            return normalized
+                img_obs = np.concatenate([normalized, self._goal_image], axis=2)
+            return img_obs
         else:
             raise NotImplementedError
 
@@ -594,7 +603,7 @@ class DClawTurnMultiGoal(DClawTurnFixed):
             #     self.sample_goal_image()
         else:
             # Sample new goal at every reset if multigoal with resets.
-            self.switch_goal(random=True)
+            self.switch_goal(random=self._random_goal_sampling)
         self._reset()
         return self._get_obs(obs_dict)
 
