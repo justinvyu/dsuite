@@ -193,19 +193,18 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         reward_dict = collections.OrderedDict((
             # Penalty for distance away from goal.
-            # ('object_to_target_position_distance_cost', -5 *
-            #     object_to_target_position_distance),
-            # ('object_to_target_orientation_distance_cost', -5 *
-            #     object_to_target_circle_distance),
-            ('object_to_target_position_distance_cost', - self._position_reward_weight * \
-             np.log(20 * object_to_target_position_distance + 0.005)),
-            ('object_to_target_orientation_distance_cost',  - 1 * \
-             np.log(1 * object_to_target_circle_distance + 0.005)),
+            # ('object_to_target_position_distance_cost', self._position_reward_weight *
+            #     -20 * object_to_target_position_distance),
+            # ('object_to_target_orientation_distance_cost',
+            #     -1 * object_to_target_circle_distance),
+            ('object_to_target_position_distance_reward',
+             - np.log(20 * (object_to_target_position_distance + 0.01))),
+            ('object_to_target_orientation_distance_reward',  - 1 * \
+             - np.log(1 * (object_to_target_circle_distance + 0.005))),
 
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
-             -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)
-            ),
+             -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)),
             # Penality for high velocities.
             ('joint_vel_cost', -1 * np.linalg.norm(claw_vel[claw_vel >= 0.5])),
 
