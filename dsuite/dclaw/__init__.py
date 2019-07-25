@@ -121,6 +121,31 @@ register(
     class_path='dsuite.dclaw.turn:DClawTurnRandomResetSingleGoal')
 
 #===============================================================================
+# Lift Object tasks
+#===============================================================================
+
+register(
+    env_id='DClawLiftDDFixed-v0',
+    class_path='dsuite.dclaw.lift:DClawLiftDDFixed')
+
+register(
+    env_id='DClawLiftDDResetFree-v0',
+    class_path='dsuite.dclaw.lift:DClawLiftDDResetFree')
+
+
+#===============================================================================
+# Flip Object tasks
+#===============================================================================
+
+register(
+    env_id='DClawFlipEraserFixed-v0',
+    class_path='dsuite.dclaw.flip:DClawFlipEraserFixed')
+
+register(
+    env_id='DClawFlipEraserResetFree-v0',
+    class_path='dsuite.dclaw.flip:DClawFlipEraserResetFree')
+
+#===============================================================================
 # Screw tasks
 #===============================================================================
 
