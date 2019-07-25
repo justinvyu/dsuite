@@ -56,7 +56,7 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
     def __init__(self,
                  sim_model: Any,
                  observation_keys: Optional[Sequence[str]] = None,
-                 reward_keys: Optional[Sequence[str]] = None,
+                 reward_keys_and_weights: Optional[Sequence[str]] = None,
                  use_dict_obs: bool = True,
                  frame_skip: int = 1,
                  camera_settings: Optional[Dict] = None,
@@ -81,7 +81,7 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
             sim_backend:
         """
         self._observation_keys = observation_keys
-        self._reward_keys = reward_keys
+        self._reward_keys_and_weights = reward_keys_and_weights
         self._use_dict_obs = use_dict_obs
         self._components = []
 
@@ -478,7 +478,10 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
             obs = np.concatenate([np.ravel(v) for v in obs_values])
         return obs
 
-    def _get_total_reward(self, reward_dict: Dict[str, np.ndarray]) -> float:
+    def _get_total_reward(
+            self,
+            reward_dict: Dict[str, np.ndarray],
+    ) -> float:
         """Returns the total reward for the given reward dictionary.
 
         The default implementation extracts the keys from `reward_keys` and sums
@@ -492,8 +495,9 @@ class RobotEnv(gym.Env, metaclass=abc.ABCMeta):
             The total reward for the dictionary.
         """
         # TODO(michaelahn): Enforce that the reward values are scalar.
-        if self._reward_keys:
-            reward_values = (reward_dict[key] for key in self._reward_keys)
+        if self._reward_keys_and_weights:
+            reward_values = (reward_dict[key]*weight
+                             for key, weight in self._reward_keys_and_weights.items())
         else:
             reward_values = reward_dict.values()
         return np.sum(np.fromiter(reward_values, dtype=float))
