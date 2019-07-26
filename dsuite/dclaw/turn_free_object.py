@@ -199,8 +199,8 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             #     -1 * object_to_target_circle_distance),
             ('object_to_target_position_distance_reward',
              - np.log(20 * (object_to_target_position_distance + 0.01))),
-            ('object_to_target_orientation_distance_reward',  - 1 * \
-             - np.log(1 * (object_to_target_circle_distance + 0.005))),
+            ('object_to_target_orientation_distance_reward',
+             - np.log(1 * object_to_target_circle_distance + 0.005)),
 
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
@@ -343,11 +343,11 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
     """Turns the object with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 *args, 
                  init_angle_range=(0, 0),
                  target_angle_range=(np.pi, np.pi),
                  init_x_pos_range=(0, 0),
                  init_y_pos_range=(0, 0),
+                 *args,
                  **kwargs):
         self._init_angle_range = init_angle_range
         self._target_angle_range = target_angle_range
@@ -528,22 +528,14 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
 class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
     """Turns the object reset-free with a target position swapped every reset."""
     def __init__(self,
-                 #observation_keys=DEFAULT_OBSERVATION_KEYS,
-                 goals=((0, 0, 0, 0, 0, np.pi/2), (0, 0, 0, 0, 0, -np.pi/2)),
+                 goals=[(0.01, 0.01, 0, 0, 0, np.pi / 2),
+                        (-0.01, -0.01, 0, 0, 0, -np.pi / 2)],
                  **kwargs):
         super().__init__(
             #observation_keys=observation_keys + ('other_reward',),
             **kwargs)
         self._goal_index = 0
-        self._goals = [
-            # (0.0, 0.0, 0, 0, 0, np.pi/2),
-            # (-0.0, -0.0, 0, 0, 0, -np.pi/2)
-            (0.01, 0.01, 0, 0, 0, np.pi / 2),
-            (-0.01, -0.01, 0, 0, 0, -np.pi / 2)
-            # (0.05, -0.05, 0, 0, 0, -np.pi/2),
-            # (-0.05, 0.05, 0, 0, 0, np.pi/2)
-        ]
-        self._goals = np.array(goals)
+        self._goals = goals
         self.n_goals = len(self._goals)
 
     def get_obs_dict(self):
@@ -593,8 +585,8 @@ class DClawTurnFreeValve3ResetFreeSwapGoalEval(DClawTurnFreeValve3Fixed):
             **kwargs)
         self._goal_index = 0
         self._goals = [
-            (0.0, 0.0, 0, 0, 0, np.pi/2),
-            (-0.0, -0.0, 0, 0, 0, -np.pi/2)]
+            (0.01, 0.01, 0, 0, 0, np.pi/2),
+            (-0.01, -0.01, 0, 0, 0, -np.pi/2)]
             # (0.05, -0.05, 0, 0, 0, -np.pi/2),
             # (-0.05, 0.05, 0, 0, 0, np.pi/2)]
         self.n_goals = len(self._goals)
@@ -604,8 +596,22 @@ class DClawTurnFreeValve3ResetFreeSwapGoalEval(DClawTurnFreeValve3Fixed):
         return self._goals[self._goal_index]
 
     def _reset(self):
+        lows, highs = list(zip(self._init_angle_range,
+                               self._init_x_pos_range,
+                               self._init_y_pos_range))
+        init_angle, x_pos, y_pos = np.random.uniform(
+            low=lows, high=highs
+        )
+        self._set_target_object_qpos(
+            self._sample_goal(self.get_obs_dict()))
         self._initial_object_qpos = self._goals[(self._goal_index + 1) % 2]
-        super()._reset()
+        self._reset_dclaw_and_object(
+            claw_pos=self._initial_claw_qpos,
+            object_pos=np.atleast_1d(self._initial_object_qpos),
+            object_vel=np.atleast_1d(self._initial_object_qvel),
+            # guide_pos=np.atleast_1d(self._object_target_qpos))
+        )
+
 
 
 @configurable(pickleable=True)
