@@ -59,9 +59,10 @@ DEFAULT_HARDWARE_OBSERVATION_KEYS = (
 
 
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_free_valve3_in_arena.xml'
-# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_less_tiny_box.xml'
+# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_tiny_box.xml'        # 20cm^2
+# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_less_tiny_box.xml'   # 25cm^2
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_fixed_tiny_box.xml'
-DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_free.xml'
+DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_free.xml'              # 30cm^2
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_free_cube.xml'
 
 
@@ -530,6 +531,7 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
     def __init__(self,
                  goals=[(0.01, 0.01, 0, 0, 0, np.pi / 2),
                         (-0.01, -0.01, 0, 0, 0, -np.pi / 2)],
+                 #observation_keys=DEFAULT_OBSERVATION_KEYS,
                  **kwargs):
         super().__init__(
             #observation_keys=observation_keys + ('other_reward',),
@@ -636,11 +638,6 @@ class DClawTurnFreeValve3FixedResetSwapGoal(DClawTurnFreeValve3Fixed):
         self._init_angle_range = (-np.pi, np.pi)
         self._init_x_pos_range = [-0.05, 0.05]
         self._init_y_pos_range = [-0.05, 0.05]
-        self._goals = [
-            (0.05, 0.05, 0, 0, 0, np.pi/2),
-            (-0.05, -0.05, 0, 0, 0, -np.pi/2)]
-            # (0.05, -0.05, 0, 0, 0, -np.pi/2),
-            # (-0.05, 0.05, 0, 0, 0, np.pi/2)]
         self._init_x_pos_range = [-0.03, 0.03]
         self._init_y_pos_range = [-0.03, 0.03]
 

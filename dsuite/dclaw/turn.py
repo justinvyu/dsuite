@@ -111,7 +111,7 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         self._camera_config = camera_config
         if self._camera_config is not None:
             self.image_service = get_image_service(**camera_config)
-        self._desired_claw_pos = RESET_POSE
+        self._desired_claw_pos = DEFAULT_CLAW_RESET_POSE
         self._last_action = np.zeros(9)
 
         self._target_bid = self.model.body_name2id('target')
@@ -124,7 +124,7 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     def _reset(self):
         """Resets the environment."""
         self._reset_dclaw_and_object(
-            claw_pos=RESET_POSE,
+            claw_pos=DEFAULT_CLAW_RESET_POSE,
             object_pos=self._initial_object_pos,
             object_vel=self._initial_object_vel,
             guide_pos=self._target_object_pos)
@@ -152,7 +152,7 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         object_to_target_angle_dist = circle_distance(
             self._target_object_pos, object_angle)
         # target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
-        print([object_angle, self._target_object_pos])
+        # print([object_angle, self._target_object_pos])
         obs_dict = collections.OrderedDict((
             ('claw_qpos', claw_state.qpos.copy()),
             ('claw_qvel', claw_state.qvel.copy()),
@@ -453,7 +453,6 @@ class DClawTurnResetFreeRandomGoal(DClawTurnResetFree):
         return np.random.uniform(-np.pi, np.pi)
 
 
-
 @configurable(pickleable=True)
 class DClawTurnImageResetFree(DClawTurnImage):
     """
@@ -469,9 +468,13 @@ class DClawTurnImageResetFree(DClawTurnImage):
     def reset(self):
         obs_dict = self.get_obs_dict()
         for _ in range(15):
-            self._step(RESET_POSE)
+            self._step(DEFAULT_CLAW_RESET_POSE)
         self._reset()
         return self._get_obs(obs_dict)
+
+class BaseMultiGoalEnv(metaclass=abc.ABCMeta):
+    # TODO: Put common abstractions in this class
+    pass
 
 @configurable(pickleable=True)
 class DClawTurnMultiGoal(DClawTurnFixed):
@@ -593,7 +596,7 @@ class DClawTurnMultiGoal(DClawTurnFixed):
         obs_dict = self.get_obs_dict()
         if self._reset_claw:
             for _ in range(15):
-                self._step(RESET_POSE)
+                self._step(DEFAULT_CLAW_RESET_POSE)
         # Check if the goal has been completed heuristically.
         object_target_angle_dist = obs_dict['object_to_target_angle_dist']
         if self._swap_goals_upon_completion:
@@ -644,3 +647,4 @@ class DClawTurnMultiGoal(DClawTurnFixed):
 class DClawTurnMultiGoalResetFree(DClawTurnMultiGoal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, reset_free=True, **kwargs)
+

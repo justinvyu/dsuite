@@ -68,6 +68,10 @@ register(
     env_id='DClawTurnMultiGoalResetFree-v0',
     class_path='dsuite.dclaw.turn:DClawTurnMultiGoalResetFree')
 
+register(
+    env_id='DClawTurnRandomResetSingleGoal-v0',
+    class_path='dsuite.dclaw.turn:DClawTurnRandomResetSingleGoal')
+
 #===============================================================================
 # Turn Free Object tasks
 #===============================================================================
@@ -117,8 +121,12 @@ register(
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3Image')
 
 register(
-    env_id='DClawTurnRandomResetSingleGoal-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnRandomResetSingleGoal')
+    env_id='DClawTurnFreeValve3MultiGoal-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3MultiGoal')
+
+register(
+    env_id='DClawTurnFreeValve3MultiGoalResetFree-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3MultiGoalResetFree')
 
 #===============================================================================
 # Lift Object tasks

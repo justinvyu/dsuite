@@ -40,8 +40,7 @@ limitations under the License. -->
 
       <body name="visual" pos="0 0 0.0101">
         <include file='../../../dsuite-scenes/dclaw_stations/assets/valve3_free_visual.xml'/>
-      </body>
-
+      </body> 
 
       <!-- <body name="visual"> -->
       <!--   <geom type="capsule" pos="0.040625 0 0" size="0.02 0.026875" condim="4" conaffinity="0" contype="0" group="1" rgba="0.23529412 0.72941176 0.32941176 0.1" mass="0.0000001" euler="0 1.57 0" /> -->
