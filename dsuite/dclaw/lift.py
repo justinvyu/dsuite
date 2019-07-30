@@ -87,7 +87,7 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         """
         self._position_reward_weight = position_reward_weight
         self._camera_config = camera_config
-        self._target_qpos_offset = np.array([0, 0, 0.051, 1.017, 0, 0]) # get from dodecahedron.xml, object['pos', 'euler']
+        self._object_offset = np.array([0, 0, 0.051, 1.017, 0, 0]) # get from dodecahedron.xml, object['pos', 'euler']
 
         super().__init__(
             sim_model=get_asset_path(asset_path),
@@ -101,12 +101,13 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         self._last_action = np.zeros(9)
 
         self._target_bid = self.model.body_name2id('target')
+        # self._target_bid = self.model.body_name2id('object_tracker')
 
         # The following are modified (possibly every reset) by subclasses.
         self._set_target_object_qpos((0, 0, 0, 0, 0, 0))
         self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
         self._initial_object_qpos = (0, 0, 0, 0, 0, 0)
-        self._initial_object_qvel = (0, 0, 0, 0, 0, 0)
+        self._initial_object_qvel = (0, 0, 0, 0, 0, 0, 0) #(0, 0, 0, 0, 0, 0)
 
     def _reset(self):
         """Resets the environment."""
@@ -136,9 +137,8 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         claw_state, object_state = self.robot.get_state(['dclaw', 'object'])
 
-        object_position = object_state.qpos[:3].copy()
-        object_quaternion = euler2quat(*object_state.qpos[3:])
-
+        object_position = object_state.qpos[:3].copy() - self._object_offset[:3]
+        object_quaternion = object_state.qpos[3:] #euler2quat(*object_state.qpos[3:])
         if object_quaternion[0] < 0: # avoid double cover
             object_quaternion = -object_quaternion
 
@@ -203,11 +203,11 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             # ('object_to_target_orientation_distance_cost', -5 *
             #     object_to_target_circle_distance),
             ('object_to_target_xy_position_distance_reward',
-             - np.log(20 * (object_to_target_xy_position_distance + 0.01))),
+             - np.log(10 * object_to_target_xy_position_distance + 0.01)),
             ('object_to_target_z_position_distance_reward',
-             - np.log(30 * (object_to_target_z_position_distance + 0.005))),
+             - np.log(15 * object_to_target_z_position_distance + 0.01)),
             ('object_to_target_orientation_distance_reward',
-             - np.log(3 * (object_to_target_sphere_distance + 0.005))),
+             - np.log(object_to_target_sphere_distance + 0.01)),
 
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
@@ -242,10 +242,10 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             np.array(target_qpos[3:]) + np.pi, 2 * np.pi) - np.pi
 
         # Mark the target position in sim.
-        self.model.body_pos[self._target_bid] = self._object_target_position + self._target_qpos_offset[:3]
+        self.model.body_pos[self._target_bid] = self._object_target_position + self._object_offset[:3]
         # self.model.body_quat[self._target_bid] = euler2quat(
         #     *self._object_target_orientation)
-        quat = euler2quat(*self._object_target_orientation + self._target_qpos_offset[3:])
+        quat = euler2quat(*self._object_target_orientation + self._object_offset[3:])
         if quat[0] < 0: # avoid double cover
             quat = -quat
         self.model.body_quat[self._target_bid] = self._target_quaternion = quat
@@ -293,7 +293,7 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
     """Turns the dodecahedron with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 init_qpos_range=[(0, 0, 0, 0, 0, 0)],
+                 init_qpos_range=[(0.075, 0.075, 0, np.pi/2, 0, 0)],
                  target_qpos_range=[(0, 0, 0.05, 0, 0, np.pi)],
                  asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml',
                  *args, **kwargs):
@@ -320,6 +320,11 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
             self._initial_object_qpos = np.random.uniform(
                 low=self._init_qpos_range[0], high=self._init_qpos_range[1]
             )
+
+        self._initial_object_qpos = np.concatenate([
+            self._initial_object_qpos[:3],
+            euler2quat(*self._initial_object_qpos[3:])
+        ])
         self._set_target_object_qpos(
             self._sample_goal(self.get_obs_dict()))
         super()._reset()
@@ -342,7 +347,7 @@ class DClawLiftDDResetFree(BaseDClawLiftFreeObject):
         super().__init__(**kwargs)
         self._swap_goal_upon_completion = swap_goal_upon_completion
         # self._goals = [(-0.06, -0.08, 0, 0, 0, 0), (-0.06, -0.08, 0, 0, 0, 0)]
-        self._goals = ((0, 0, 0, 0, 0, np.pi), (0, 0, 0, 0, 0, np.pi))
+        self._goals = ((0, 0, 0.05, 0, 0, np.pi), (0, 0, 0.05, 0, 0, np.pi))
         self._goal_index = 1
 
         self._position_reward_weight = position_reward_weight
