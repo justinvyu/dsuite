@@ -40,7 +40,7 @@ limitations under the License. -->
         <geom type="box" size="0.005 0.155 0.04" pos="0.15 0 0" material="light-wood"/>
         <geom type="box" size="0.005 0.155 0.04" pos="-0.15 0 0" material="light-wood"/>
         <geom type="box" size="0.155 0.005 0.04" pos="0 -0.15 0" material="light-wood"/>
-        <geom type="box" size="0.155 0.155 0.01" pos="0 0 0" material="light-wood" friction='0.1 0.005 0.0001'/>
+        <!-- <geom type="box" size="0.155 0.155 0.01" pos="0 0 0" material="light-wood" friction='0.1 0.005 0.0001'/> -->
       </body>
       <!-- <body name="arena" pos="0 0 0"> -->
       <!--   <include file='../../../dsuite-scenes/dclaw_stations/assets/small_oct_arena.xml'/> -->

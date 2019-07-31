@@ -87,7 +87,7 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         """
         self._position_reward_weight = position_reward_weight
         self._camera_config = camera_config
-        self._object_offset = np.array([0, 0, 0.051, 1.017, 0, 0]) # get from dodecahedron.xml, object['pos', 'euler']
+        self._object_offset = np.array([0, 0, 0.041, 1.017, 0, 0]) # get from dodecahedron.xml, object['pos', 'euler']
 
         super().__init__(
             sim_model=get_asset_path(asset_path),
@@ -137,11 +137,10 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         claw_state, object_state = self.robot.get_state(['dclaw', 'object'])
 
-        object_position = object_state.qpos[:3].copy() - self._object_offset[:3]
+        object_position = object_state.qpos[:3].copy()# - self._object_offset[:3]
         object_quaternion = object_state.qpos[3:] #euler2quat(*object_state.qpos[3:])
         if object_quaternion[0] < 0: # avoid double cover
             object_quaternion = -object_quaternion
-
         target_position = self._object_target_position
         target_quaternion = self._target_quaternion
 
@@ -208,13 +207,11 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
              - np.log(15 * object_to_target_z_position_distance + 0.01)),
             ('object_to_target_orientation_distance_reward',
              - np.log(object_to_target_sphere_distance + 0.01)),
-
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
              -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)),
             # Penality for high velocities.
             ('joint_vel_cost', -1 * np.linalg.norm(claw_vel[claw_vel >= 0.5])),
-
             # Reward for close proximity with goal.
             ('bonus_small', 10 * (object_to_target_sphere_distance < 0.5)),
             ('bonus_big', 50 * (object_to_target_sphere_distance < 0.20)),
@@ -236,16 +233,15 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
     def _set_target_object_qpos(self, target_qpos: float):
         """Sets the goal position and orientation."""
-        # Modulo to [-pi, pi].
-        self._object_target_position = target_qpos[:3]
-        self._object_target_orientation = np.mod(
-            np.array(target_qpos[3:]) + np.pi, 2 * np.pi) - np.pi
 
         # Mark the target position in sim.
-        self.model.body_pos[self._target_bid] = self._object_target_position + self._object_offset[:3]
-        # self.model.body_quat[self._target_bid] = euler2quat(
-        #     *self._object_target_orientation)
-        quat = euler2quat(*self._object_target_orientation + self._object_offset[3:])
+        self._object_target_position = target_qpos[:3] + self._object_offset[:3]
+        self.model.body_pos[self._target_bid] = self._object_target_position
+
+        # Modulo to [-pi, pi].
+        target_euler = np.mod(
+            np.array(target_qpos[3:]) + np.pi, 2 * np.pi) - np.pi
+        quat = euler2quat(*target_euler + self._object_offset[3:])
         if quat[0] < 0: # avoid double cover
             quat = -quat
         self.model.body_quat[self._target_bid] = self._target_quaternion = quat
@@ -293,8 +289,12 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
     """Turns the dodecahedron with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 init_qpos_range=[(0.075, 0.075, 0, np.pi/2, 0, 0)],
-                 target_qpos_range=[(0, 0, 0.05, 0, 0, np.pi)],
+                 init_qpos_range=[(0, 0, 0.041, 1.017, 0, 0)], # default global init pos, green faces up
+                 target_qpos_range=[  # target pos relative to init
+                     (0, 0, 0, 0, 0, np.pi),
+                     (0, 0, 0, np.pi, 0, 0), # bgreen side up
+                     (0, 0, 0, 1.017, 0, 2*np.pi/5), # black side up
+                 ],
                  asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml',
                  *args, **kwargs):
         self._init_qpos_range = init_qpos_range
