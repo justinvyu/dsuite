@@ -581,16 +581,14 @@ class DClawTurnFreeValve3ResetFreeSwapGoalEval(DClawTurnFreeValve3Fixed):
     """Turns the object reset-free with a target position swapped every reset."""
     def __init__(self,
                  #observation_keys=DEFAULT_OBSERVATION_KEYS,
+                 goals=[(0.01, 0.01, 0, 0, 0, np.pi / 2),
+                        (-0.01, -0.01, 0, 0, 0, -np.pi / 2)],
                  **kwargs):
         super().__init__(
             #observation_keys=observation_keys + ('other_reward',),
             **kwargs)
         self._goal_index = 0
-        self._goals = [
-            (0.01, 0.01, 0, 0, 0, np.pi/2),
-            (-0.01, -0.01, 0, 0, 0, -np.pi/2)]
-            # (0.05, -0.05, 0, 0, 0, -np.pi/2),
-            # (-0.05, 0.05, 0, 0, 0, np.pi/2)]
+        self._goals = goals
         self.n_goals = len(self._goals)
 
     def _sample_goal(self, obs_dict):
