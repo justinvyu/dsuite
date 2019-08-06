@@ -60,7 +60,7 @@ DEFAULT_HARDWARE_OBSERVATION_KEYS = (
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_x2_catch.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_octahedron.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml'
-DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_eraser.xml'
+DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_eraser_sloped_arena.xml'
 
 
 class BaseDClawFlipFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
@@ -86,7 +86,7 @@ class BaseDClawFlipFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         """
         self._position_reward_weight = position_reward_weight
         self._camera_config = camera_config
-        self._target_offset = np.array([0, 0, 0.027]) # get from dodecahedron.xml, object['pos']
+        self._target_offset = np.array([0, 0, 0.0175]) # get from dodecahedron.xml, object['pos']
 
         super().__init__(
             sim_model=get_asset_path(asset_path),
@@ -105,7 +105,7 @@ class BaseDClawFlipFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         self._set_target_object_qpos((0, 0, 0, 0, 0, 0))
         self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
         self._initial_object_qpos = (0, 0, 0, 0, 0, 0)
-        # self._initial_object_qvel = (0, 0, 0, 0, 0, 0)
+        self._initial_object_qvel = (0, 0, 0, 0, 0, 0, 0)
 
     def _reset(self):
         """Resets the environment."""
@@ -141,7 +141,7 @@ class BaseDClawFlipFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         claw_state, object_state = self.robot.get_state(['dclaw', 'object'])
 
         object_position = object_state.qpos[:3].copy()
-        object_quaternion = euler2quat(*object_state.qpos[3:])
+        object_quaternion = object_state.qpos[3:] #euler2quat(*object_state.qpos[3:])
 
         if object_quaternion[0] < 0: # avoid double cover
             object_quaternion = -object_quaternion
@@ -208,11 +208,11 @@ class BaseDClawFlipFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             # ('object_to_target_orientation_distance_cost', -5 *
             #     object_to_target_circle_distance),
             ('object_to_target_position_distance_reward',
-             - np.log(20 * (object_to_target_position_distance + 0.01))),
+             - np.log(10 * (object_to_target_position_distance + 0.001))),
             # ('object_to_target_z_position_distance_reward',
             #  - np.log(30 * (object_to_target_z_position_distance + 0.005))),
             ('object_to_target_orientation_distance_reward',
-             - np.log(3 * (object_to_target_sphere_distance + 0.005))),
+             - np.log(0.5 * (object_to_target_sphere_distance + 0.01))),
 
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
@@ -296,11 +296,16 @@ class DClawFlipEraserFixed(BaseDClawFlipFreeObject):
     """Turns the dodecahedron with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 init_qpos_range=((0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0)),
+                 init_qpos_range=(
+                     (-0.08, -0.08, 0.03, 0, 0, -np.pi),
+                     (0.08, 0.08, 0.03, 0, 0, np.pi)
+                 ),
                  target_qpos_range=[(0, 0, 0, np.pi, 0, 0), (0, 0, 0, np.pi, 0, 0)],
+                 reset_from_corners=False,
                  *args, **kwargs):
         self._init_qpos_range = init_qpos_range
         self._target_qpos_range = target_qpos_range
+        self._reset_from_corners = reset_from_corners
         super().__init__(*args, **kwargs)
 
     def _sample_goal(self, obs_dict):
@@ -322,9 +327,33 @@ class DClawFlipEraserFixed(BaseDClawFlipFreeObject):
             self._initial_object_qpos = np.random.uniform(
                 low=self._init_qpos_range[0], high=self._init_qpos_range[1]
             )
+        self._initial_object_qpos = np.concatenate([
+            self._initial_object_qpos[:3],
+            euler2quat(*self._initial_object_qpos[3:])
+        ])
         self._set_target_object_qpos(
             self._sample_goal(self.get_obs_dict()))
         super()._reset()
+
+    def reset(self):
+        self.sim.reset()
+        self.sim.forward()
+        self._reset()
+        if self._reset_from_corners:
+            corner_index = np.random.randint(2, size=2) * 2 - 1 # -1 or 1
+            self.data.qpos[-7:-5] = np.array([0.05, 0.05]) * corner_index
+
+            open_claw_position = np.tile([0, -1.5, -1.5], 3)
+            for _ in range(5):
+                self.data.ctrl[:9] = open_claw_position
+                self.data.qfrc_applied[-7:-5] = np.array([1, 1]) * corner_index
+                self.sim_scene.advance()
+            self.data.qfrc_applied[-7:-5] = 0
+            self.data.qpos[:9] = DEFAULT_CLAW_RESET_POSE.copy()
+
+        # self._set_target_object_qpos(self._sample_goal(obs_dict))
+        return self._get_obs(self.get_obs_dict())
+
 
 
 @configurable(pickleable=True)
@@ -375,3 +404,53 @@ class DClawFlipEraserResetFree(BaseDClawFlipFreeObject):
         self._set_target_object_qpos(self._sample_goal(obs_dict))
         dclaw_config.set_control_mode(dclaw_control_mode)
         return self._get_obs(self.get_obs_dict())
+
+
+@configurable(pickleable=True)
+class DClawFlipEraserResetFreeSwapGoal(DClawFlipEraserResetFree):
+    """Turns the object reset-free with a target position swapped every reset."""
+    def __init__(self,
+                 goals = ((0, 0, 0, np.pi, 0, 0), (0, 0, 0, 0, 0, 0)),
+                 **kwargs):
+        super().__init__(
+            **kwargs)
+        self._goal_index = 0
+        self._goals = np.array(goals)
+        self.n_goals = len(self._goals)
+
+    def _sample_goal(self, obs_dict):
+        self._goal_index = (self._goal_index + 1) % self.n_goals
+        return self._goals[self._goal_index]
+
+
+@configurable(pickleable=True)
+class DClawFlipEraserResetFreeSwapGoalEval(DClawFlipEraserFixed):
+    """Turns the object reset-free with a target position swapped every reset."""
+    def __init__(self,
+                 goals = ((0, 0, 0, np.pi, 0, 0), (0, 0, 0, 0, 0, 0)),
+                 **kwargs):
+        super().__init__(
+            **kwargs)
+        self._goal_index = 0
+        self._goals = np.array(goals)
+        self.n_goals = len(self._goals)
+
+    def _sample_goal(self, obs_dict):
+        self._goal_index = (self._goal_index + 1) % self.n_goals
+        return self._goals[self._goal_index]
+
+    def _reset(self):
+        self._set_target_object_qpos(
+            self._sample_goal(self.get_obs_dict()))
+        self._initial_object_qpos = self._goals[(self._goal_index + 1) % 2]
+
+        self._initial_object_qpos = np.concatenate([
+            self._initial_object_qpos[:3],
+            euler2quat(*self._initial_object_qpos[3:])
+        ])
+
+        self._reset_dclaw_and_object(
+            claw_pos=self._initial_claw_qpos,
+            object_pos=np.atleast_1d(self._initial_object_qpos),
+            object_vel=np.atleast_1d(self._initial_object_qvel),
+        )
