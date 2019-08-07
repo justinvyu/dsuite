@@ -41,11 +41,12 @@ from dsuite.components.robot import RobotState
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (
     'claw_qpos',
-    'object_position',
-    'object_orientation_cos',
-    'object_orientation_sin',
+    'object_xy_position',
+    # 'object_orientation_cos',
+    # 'object_orientation_sin',
+    'object_angle',
     'last_action',
-    'target_orientation',
+    'target_angle',
 #    'target_orientation_cos',
 #    'target_orientation_sin',
 #    'object_to_target_relative_position',
@@ -138,6 +139,8 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         object_position = object_state.qpos[:3].copy()
         object_orientation = object_state.qpos[3:].copy()
+        object_angle = np.mod(
+            np.array(object_orientation[2]) + np.pi, 2 * np.pi) - np.pi
 
         target_position = self._object_target_position
         target_orientation = self._object_target_orientation
@@ -157,16 +160,19 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             in_corner = 3
         elif object_position[0] > CORNER_THRESHOLD and object_position[1] < - CORNER_THRESHOLD:
             in_corner = 4
+
         return collections.OrderedDict((
             ('claw_qpos', claw_state.qpos.copy()),
             ('claw_qvel', claw_state.qvel.copy()),
             ('object_position', object_position),
+            ('object_xy_position', object_position[:2]),
             ('object_orientation', object_orientation),
             ('object_orientation_cos', np.cos(object_orientation)),
             ('object_orientation_sin', np.sin(object_orientation)),
+            ('object_angle', object_angle.reshape(-1)),
             ('object_qvel', object_state.qvel),
             ('last_action', self._last_action),
-            ('target_angle', target_orientation[2]),
+            ('target_angle', target_orientation[2].reshape(-1)),
             ('target_position', target_position),
             ('target_orientation', target_orientation),
             ('target_orientation_cos', np.cos(target_orientation)),
@@ -540,16 +546,16 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
         self._goals = goals
         self.n_goals = len(self._goals)
 
-    def get_obs_dict(self):
-        obs_dict = super().get_obs_dict()
+    # def get_obs_dict(self):
+    #     obs_dict = super().get_obs_dict()
 
-        self._set_target_object_qpos(self._sample_goal(None))
-        swapped_goal_obs_dict = super().get_obs_dict()
-        self._set_target_object_qpos(self._sample_goal(None))
+        # self._set_target_object_qpos(self._sample_goal(None))
+        # swapped_goal_obs_dict = super().get_obs_dict()
+        # self._set_target_object_qpos(self._sample_goal(None))
 
-        obs_dict['other_reward'] = [self._get_total_reward(
-            self.get_reward_dict(None, swapped_goal_obs_dict))]
-        return obs_dict
+        # obs_dict['other_reward'] = [self._get_total_reward(
+        #     self.get_reward_dict(None, swapped_goal_obs_dict))]
+        # return obs_dict
 
     def relabel_path(self, path):
         observations = path['observations']
@@ -572,7 +578,9 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
         return path
 
     def _sample_goal(self, obs_dict):
-        self._goal_index = (self._goal_index + 1) % self.n_goals
+        other_goal_inds = [i for i in range(self.n_goals) if i != self._goal_index]
+        self._goal_index = np.random.choice(other_goal_inds)
+        # self._goal_index = (self._goal_index + 1) % self.n_goals
         return self._goals[self._goal_index]
 
 
@@ -592,7 +600,8 @@ class DClawTurnFreeValve3ResetFreeSwapGoalEval(DClawTurnFreeValve3Fixed):
         self.n_goals = len(self._goals)
 
     def _sample_goal(self, obs_dict):
-        self._goal_index = (self._goal_index + 1) % self.n_goals
+        other_goal_inds = [i for i in range(self.n_goals) if i != self._goal_index]
+        self._goal_index = np.random.choice(other_goal_inds)
         return self._goals[self._goal_index]
 
     def _reset(self):
@@ -604,7 +613,9 @@ class DClawTurnFreeValve3ResetFreeSwapGoalEval(DClawTurnFreeValve3Fixed):
         )
         self._set_target_object_qpos(
             self._sample_goal(self.get_obs_dict()))
-        self._initial_object_qpos = self._goals[(self._goal_index + 1) % 2]
+        other_goal_inds = [i for i in range(self.n_goals) if i != self._goal_index]
+        other_goal_ind = np.random.choice(other_goal_inds)
+        self._initial_object_qpos = self._goals[other_goal_ind]
         self._reset_dclaw_and_object(
             claw_pos=self._initial_claw_qpos,
             object_pos=np.atleast_1d(self._initial_object_qpos),
