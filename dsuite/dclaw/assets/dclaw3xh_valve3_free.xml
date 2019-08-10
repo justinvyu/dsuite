@@ -27,7 +27,9 @@ limitations under the License. -->
     <worldbody>
 
 		  <!-- <camera name='targeting' pos='1 1 2' mode='targetbodycom' target='dClaw'/> -->
-		  <camera name='object_target' pos='0 0 0.33' mode='targetbody' target='object'/>
+          <!-- <camera name='object_target' pos='0 0 0.33' mode='targetbodycom' target='object'/> -->
+          <camera name='object_target' pos='0.25 0 0.3' euler='0 0.7 1.57' />
+
 
 		  <body name='mount' pos='0.01 0 .255' euler='0 0 0'>
         <geom name='mount' type="cylinder" size='0.03 0.005' rgba='.7 .7 .7 1'/>
