@@ -289,17 +289,51 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
     """Turns the dodecahedron with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 init_qpos_range=[(0, 0, 0.041, 1.017, 0, 0)], # default global init pos, green faces up
+                 init_qpos_range=(
+                     (0, 0, 0.041, 1.017, 0, 0),
+                     (0, 0, 0.041, 1.017, 0, 0)
+                 ), # [(0, 0, 0.041, 1.017, 0, 0)], # default global init pos, green faces up
                  target_qpos_range=[  # target pos relative to init
-                     (0, 0, 0, 0, 0, np.pi),
-                     (0, 0, 0, np.pi, 0, 0), # bgreen side up
-                     (0, 0, 0, 1.017, 0, 2*np.pi/5), # black side up
+                     (0, 0, 0.05, 0, 0, np.pi),
+                     (0, 0, 0.05, np.pi, 0, 0), # bgreen side up
+                     (0, 0, 0.05, 1.017, 0, 2*np.pi/5), # black side up
                  ],
                  asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml',
+                 reset_policy_checkpoint_path='/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
                  *args, **kwargs):
         self._init_qpos_range = init_qpos_range
         self._target_qpos_range = target_qpos_range
         super().__init__(asset_path=asset_path, *args, **kwargs)
+        self._reset_horizon = 0
+        if reset_policy_checkpoint_path:
+            self._load_policy(reset_policy_checkpoint_path)
+
+    def _load_policy(self, checkpoint_path):
+        import pickle
+        from softlearning.policies.utils import get_policy_from_variant
+        checkpoint_path = checkpoint_path.rstrip('/')
+        experiment_path = os.path.dirname(checkpoint_path)
+
+        variant_path = os.path.join(experiment_path, 'params.pkl')
+        with open(variant_path, 'rb') as f:
+            variant = pickle.load(f)
+
+        policy_weights_path = os.path.join(checkpoint_path, 'policy_params.pkl')
+        with open(policy_weights_path, 'rb') as f:
+            policy_weights = pickle.load(f)
+
+        from softlearning.environments.adapters.gym_adapter import GymAdapter
+        from softlearning.environments.gym.wrappers import (
+            NormalizeActionWrapper)
+
+        env = GymAdapter(None, None, env=NormalizeActionWrapper(self))
+
+        self._policy = (
+            get_policy_from_variant(variant, env))
+        self._policy.set_weights(policy_weights)
+        self._reset_horizon = variant['sampler_params']['kwargs']['max_path_length']
+
+        self._reset_target_qpos_range = variant['environment_params']['training']['kwargs']['target_qpos_range']
 
     def _sample_goal(self, obs_dict):
         if isinstance(self._target_qpos_range, (list,)):
@@ -328,6 +362,43 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
         self._set_target_object_qpos(
             self._sample_goal(self.get_obs_dict()))
         super()._reset()
+
+    def get_policy_input(self):
+        from softlearning.models.utils import flatten_input_structure
+        obs_dict = self.get_obs_dict()
+        observation = flatten_input_structure({
+            key: obs_dict[key][None, ...]
+            for key in self._policy.observation_keys
+        })
+        return observation
+
+    def reset(self):
+        self.sim.reset()
+        self.sim.forward()
+        self._reset()
+
+        target_qpos_range = self._target_qpos_range
+        self._target_qpos_range = self._reset_target_qpos_range
+        self._set_target_object_qpos(
+            self._sample_goal(self.get_obs_dict()))
+
+        for _ in range(self._reset_horizon):
+            policy_input = self.get_policy_input()
+            action = self._policy.actions_np(policy_input)[0]
+            self.step(action)
+
+        self._target_qpos_range = target_qpos_range
+        self._set_target_object_qpos(
+            self._sample_goal(self.get_obs_dict()))
+
+        obs_dict = self.get_obs_dict()
+        self.last_obs_dict = obs_dict
+        self.last_reward_dict = None
+        self.last_score_dict = None
+        self.is_done = False
+
+        return self._get_obs(obs_dict)
+
 
 
 @configurable(pickleable=True)
