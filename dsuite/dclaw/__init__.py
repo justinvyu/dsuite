@@ -153,6 +153,14 @@ register(
     env_id='DClawFlipEraserResetFree-v0',
     class_path='dsuite.dclaw.flip:DClawFlipEraserResetFree')
 
+register(
+    env_id='DClawFlipEraserResetFreeSwapGoal-v0',
+    class_path='dsuite.dclaw.flip:DClawFlipEraserResetFreeSwapGoal')
+
+register(
+    env_id='DClawFlipEraserResetFreeSwapGoalEval-v0',
+    class_path='dsuite.dclaw.flip:DClawFlipEraserResetFreeSwapGoalEval')
+
 #===============================================================================
 # Screw tasks
 #===============================================================================

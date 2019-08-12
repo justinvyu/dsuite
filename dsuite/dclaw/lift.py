@@ -106,7 +106,7 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         # The following are modified (possibly every reset) by subclasses.
         self._set_target_object_qpos((0, 0, 0, 0, 0, 0))
         self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
-        self._initial_object_qpos = (0, 0, 0, 0, 0, 0)
+        self._initial_object_qpos = (0, 0, 0, 0, 0, 0, 0)
         self._initial_object_qvel = (0, 0, 0, 0, 0, 0, 0) #(0, 0, 0, 0, 0, 0)
 
     def _reset(self):
