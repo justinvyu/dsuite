@@ -62,26 +62,25 @@ _OBJECT_SIM_CONFIG = {
 _FREE_OBJECT_SIM_CONFIG = {
     'groups': {
         'object': {
-            # 'qpos_indices': [-1],  # The object is the last qpos.
-            # 'qpos_range': [(-np.pi, np.pi)],
-
-            # 'qpos_indices': range(-6, 0),  # The object is the last qpos.
-            # 'qpos_range': [
-            #     (-0.15, 0.15),     # restrict x
-            #     (-0.15, 0.15),     # restrict y
-            #     (0, 0.25),          # unrestricted z
-            #     (-np.pi, np.pi), # unrestricted object orientation
-            #     (-np.pi, np.pi),
-            #     (-np.pi, np.pi)],
-            'qpos_indices': range(-7, 0),  # w/ free joint
+            # Screw
+            'qpos_indices': range(-6, 0),  # The object is the last qpos.
             'qpos_range': [
                 (-0.15, 0.15),     # restrict x
                 (-0.15, 0.15),     # restrict y
                 (0, 0.25),          # unrestricted z
-                (0, 1), # avoid double cover
-                (-1, 1),
-                (-1, 1),
-                (-1, 1)],
+                (-np.pi, np.pi), # unrestricted object orientation
+                (-np.pi, np.pi),
+                (-np.pi, np.pi)],
+            # Lift, Flip
+            # 'qpos_indices': range(-7, 0),  # w/ free joint
+            # 'qpos_range': [
+            #     (-0.15, 0.15),     # restrict x
+            #     (-0.15, 0.15),     # restrict y
+            #     (0, 0.25),          # unrestricted z
+            #     (0, 1), # avoid double cover
+            #     (-1, 1),
+            #     (-1, 1),
+            #     (-1, 1)],
             'sim_observation_noise': 0,
         },
         'guide': {},  # The guide group is a no-op in simulation.

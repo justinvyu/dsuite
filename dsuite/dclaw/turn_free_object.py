@@ -41,16 +41,21 @@ from dsuite.components.robot import RobotState
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (
     'claw_qpos',
+    'object_position',
     'object_xy_position',
-    # 'object_orientation_cos',
-    # 'object_orientation_sin',
+    'object_orientation_cos',
+    'object_orientation_sin',
     'object_angle',
     'last_action',
-    'target_angle',
-#    'target_orientation_cos',
-#    'target_orientation_sin',
-#    'object_to_target_relative_position',
-#    'in_corner',
+    'target_xy_position',
+    'target_z_orientation_cos',
+    'target_z_orientation_sin',
+
+    # 'target_angle',
+    # 'target_orientation_cos',
+    # 'target_orientation_sin',
+    # 'object_to_target_relative_position',
+    # 'in_corner',
 )
 
 DEFAULT_HARDWARE_OBSERVATION_KEYS = (
@@ -173,10 +178,19 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             ('object_qvel', object_state.qvel),
             ('last_action', self._last_action),
             ('target_angle', target_orientation[2].reshape(-1)),
-            ('target_position', target_position),
             ('target_orientation', target_orientation),
+            ('target_position', target_position),
+            ('target_xy_position',
+                np.repeat(target_position[:2], 5)
+            ),
             ('target_orientation_cos', np.cos(target_orientation)),
             ('target_orientation_sin', np.sin(target_orientation)),
+            ('target_z_orientation_cos',
+                np.repeat(np.cos(target_orientation[2]), 5)
+            ),
+            ('target_z_orientation_sin',
+                np.repeat(np.sin(target_orientation[2]), 5)
+            ),
             ('object_to_target_relative_position', object_to_target_relative_position),
             ('object_to_target_relative_orientation', object_to_target_relative_orientation),
             ('object_to_target_position_distance', np.linalg.norm(object_to_target_relative_position)),
