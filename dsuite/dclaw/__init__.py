@@ -101,6 +101,10 @@ register(
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3ResetFreeSwapGoalEval')
 
 register(
+    env_id='DClawTurnFreeValve3ResetFreeComposedGoals-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3ResetFreeComposedGoals')
+
+register(
     env_id='DClawTurnFreeValve3FixedResetSwapGoal-v0',
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3FixedResetSwapGoal')
 
@@ -140,6 +144,10 @@ register(
     env_id='DClawLiftDDResetFree-v0',
     class_path='dsuite.dclaw.lift:DClawLiftDDResetFree')
 
+register(
+    env_id='DClawLiftDDResetFreeComposedGoals-v0',
+    class_path='dsuite.dclaw.lift:DClawLiftDDResetFreeComposedGoals')
+
 
 #===============================================================================
 # Flip Object tasks
@@ -160,6 +168,10 @@ register(
 register(
     env_id='DClawFlipEraserResetFreeSwapGoalEval-v0',
     class_path='dsuite.dclaw.flip:DClawFlipEraserResetFreeSwapGoalEval')
+
+register(
+    env_id='DClawFlipEraserResetFreeComposedGoals-v0',
+    class_path='dsuite.dclaw.flip:DClawFlipEraserResetFreeComposedGoals')
 
 #===============================================================================
 # Screw tasks

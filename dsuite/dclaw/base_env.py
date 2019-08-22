@@ -24,6 +24,7 @@ from dsuite.components.robot import DynamixelRobotComponent, RobotState
 from dsuite.dclaw.config import (
     DCLAW_SIM_CONFIG, DCLAW_HARDWARE_CONFIG, DCLAW_OBJECT_SIM_CONFIG,
     DCLAW_FREE_OBJECT_SIM_CONFIG,
+    DCLAW_FREE_OBJECT_QUAT_SIM_CONFIG,
     # FREE_DCLAW_FREE_OBJECT_SIM_CONFIG,
     DCLAW_OBJECT_HARDWARE_CONFIG,
     DCLAW_OBJECT_GUIDE_HARDWARE_CONFIG,
@@ -72,6 +73,7 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
             device_path: Optional[str] = None,
             free_object: bool = False,
             free_claw: bool = False,
+            quat: bool = True,
     ) -> Dict[str, Any]:
         """Returns the configuration for the given device path."""
         if device_path is not None:
@@ -87,7 +89,10 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
                 if free_claw:
                     config = FREE_DCLAW_FREE_OBJECT_SIM_CONFIG
                 else:
-                    config = DCLAW_FREE_OBJECT_SIM_CONFIG
+                    if quat:
+                        config = DCLAW_FREE_OBJECT_QUAT_SIM_CONFIG
+                    else:
+                        config = DCLAW_FREE_OBJECT_SIM_CONFIG
             else:
                 config = DCLAW_OBJECT_SIM_CONFIG
         return config
