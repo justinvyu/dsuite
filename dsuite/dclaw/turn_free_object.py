@@ -457,7 +457,7 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
                  #     (0.04, 0.04, 0, 0, 0, 0)
                  # ),
                  init_qpos_range=[(0, 0, 0, 0, 0, 0)],
-                 take_random_actions=True,
+                 take_random_actions_for=0,
                  reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/TurnFreeValve3ResetFree-v0/2019-08-22T12-37-40-random_translate_centered_around_origin/id=4de1a720-seed=779_2019-08-22_12-37-41qqs0v4da/checkpoint_200/',
                  **kwargs):
         self._last_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
