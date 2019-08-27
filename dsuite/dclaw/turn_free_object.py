@@ -457,7 +457,8 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
                  #     (0.04, 0.04, 0, 0, 0, 0)
                  # ),
                  init_qpos_range=[(0, 0, 0, 0, 0, 0)],
-                 reset_policy_checkpoint_path='/mnt/sda/ray_results/gym/DClaw/TurnFreeValve3ResetFree-v0/2019-08-22T12-37-40-random_translate_centered_around_origin/id=4de1a720-seed=779_2019-08-22_12-37-41qqs0v4da/checkpoint_200/',
+                 take_random_actions=True,
+                 reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/TurnFreeValve3ResetFree-v0/2019-08-22T12-37-40-random_translate_centered_around_origin/id=4de1a720-seed=779_2019-08-22_12-37-41qqs0v4da/checkpoint_200/',
                  **kwargs):
         self._last_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
         self._last_object_position = np.array([0, 0, 0])
@@ -465,6 +466,7 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
         self._reset_fingers = reset_fingers
         self._reset_frequency = reset_frequency
         self._reset_counter = 0
+        self._take_random_actions = take_random_actions
 
         self._path_length = path_length
         self._step_count = 0
@@ -498,6 +500,11 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
         dclaw_config = self.robot.get_config('dclaw')
         dclaw_control_mode = dclaw_config.control_mode
         dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
+        if self._take_random_actions:
+            for _ in range(50):
+                rand_action = np.random.uniform(low=-1, high=1, size=(9,))
+                self._step(rand_action)
+
         if self._reset_fingers:
             reset_action = self.robot.normalize_action(
                 {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
@@ -510,7 +517,7 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
             target_qpos_range = self._target_qpos_range
             self._target_qpos_range = self._reset_target_qpos_range
             self._set_target_object_qpos(
-                self._sample_goal(self.get_obs_dict()))
+                super()._sample_goal(self.get_obs_dict()))
 
             for _ in range(self._reset_horizon):
                 policy_input = self.get_policy_input()
