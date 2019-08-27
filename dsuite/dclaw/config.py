@@ -36,7 +36,8 @@ DCLAW_SIM_CONFIG = {
             # ] * 3,
             'qpos_indices': range(9),
             'qpos_range': [
-                (-PI / 4, PI / 4),  # 45 degrees for top servos.
+                # (-PI / 6, PI / 6),  # 45 degrees for top servos.
+                (-PI / 2, PI / 2),  # 45 degrees for top servos.
                 (-PI / 3, PI / 3),  # 60 degrees for middle servos.
                 (-PI / 2, PI / 2),  # 90 degrees for bottom servos.
             ] * 3,

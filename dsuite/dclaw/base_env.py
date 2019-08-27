@@ -30,6 +30,7 @@ from dsuite.dclaw.config import (
     DEFAULT_DCLAW_CALIBRATION_MAP)
 from dsuite.robot_env import make_box_space, RobotEnv
 DEFAULT_CLAW_RESET_POSE = np.array([0, -np.pi / 3, np.pi / 3] * 3)
+# DEFAULT_CLAW_RESET_POSE = np.array([0, -np.pi / 5, np.pi / 3] * 3)
 
 class BaseDClawEnv(RobotEnv, metaclass=abc.ABCMeta):
     """Base environment for all DClaw robot tasks."""

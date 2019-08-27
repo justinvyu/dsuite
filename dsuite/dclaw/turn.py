@@ -64,7 +64,7 @@ DEFAULT_OBSERVATION_KEYS = (
     'object_angle_cos',
     'object_angle_sin',
     'last_action',
-    # 'object_to_target_angle_dist',
+    'object_to_target_angle_dist',
     'target_angle',
 )
 
@@ -152,7 +152,6 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         object_to_target_angle_dist = circle_distance(
             self._target_object_pos, object_angle)
         # target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
-        # print([object_angle, self._target_object_pos])
         obs_dict = collections.OrderedDict((
             ('claw_qpos', claw_state.qpos.copy()),
             ('claw_qvel', claw_state.qvel.copy()),

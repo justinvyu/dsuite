@@ -37,6 +37,9 @@ from dsuite.utils.circle_math import circle_distance
 from dsuite.components.robot.config import ControlMode
 from dsuite.components.robot import RobotState
 
+INTERMEDIATE_CLAW_RESET_POSE_0 = np.array([np.pi / 3, -np.pi / 3, np.pi / 2] * 3)
+INTERMEDIATE_CLAW_RESET_POSE_1 = np.array([np.pi / 3, np.pi / 5, np.pi / 2] * 3)
+INTERMEDIATE_CLAW_RESET_POSE_2 = np.array([np.pi / 4, -np.pi / 5, np.pi / 2] * 3)
 
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (
@@ -46,6 +49,8 @@ DEFAULT_OBSERVATION_KEYS = (
     'object_orientation_sin',
     'last_action',
     'target_orientation',
+    'object_to_target_circle_distance',
+    'object_to_target_position_distance',
 #    'target_orientation_cos',
 #    'target_orientation_sin',
 #    'object_to_target_relative_position',
@@ -55,14 +60,18 @@ DEFAULT_OBSERVATION_KEYS = (
 DEFAULT_HARDWARE_OBSERVATION_KEYS = (
     'claw_qpos',
     'last_action',
+    'goal_index',
+    'target_xy_position',
+    'target_z_orientation_cos',
+    'target_z_orientation_sin',
 )
 
 
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_free_valve3_in_arena.xml'
-# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_tiny_box.xml'        # 20cm^2
-# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_less_tiny_box.xml'   # 25cm^2
+# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_tiny_box.xml'
+# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_less_tiny_box.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_fixed_tiny_box.xml'
-DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_free.xml'              # 30cm^2
+DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_free.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_free_cube.xml'
 
 
@@ -285,17 +294,28 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
                  device_path: str = None,
                  observation_keys: Sequence[str] = DEFAULT_HARDWARE_OBSERVATION_KEYS,
                  frame_skip: int = 40,
+                 num_goals: int = 1,
+                 goals: np.ndarray = ((0, 0, 0, 0, 0, np.pi)),
                  **kwargs):
+        if num_goals > 1:
+            observation_keys = observation_keys + ('goal_index', )
+
         super().__init__(
            sim_model=get_asset_path('dsuite-scenes/dclaw/dclaw3xh.xml'),
            robot_config=self.get_config_for_device(device_path),
            frame_skip=frame_skip,
+           observation_keys=observation_keys,
            **kwargs)
         self._camera_config = camera_config
         if camera_config:
             from dsuite.dclaw.turn import get_image_service
             self._image_service = get_image_service(**camera_config)
         self._last_action = np.zeros(self.action_space.shape[0])
+        self._num_goals = num_goals
+        self._goal_index = 0
+        # Goals need to be specified with 9-dim vector (same shape as qpos)
+        self._goals = goals
+        assert num_goals == len(goals)
 
     def get_obs_dict(self) -> Dict[str, np.ndarray]:
         state = self.robot.get_state('dclaw')
@@ -303,6 +323,15 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
             ('claw_qpos', state.qpos),
             ('claw_qvel', state.qvel),
             ('last_action', self._last_action),
+            ('goal_index', np.array([self._goal_index])),
+            ('target_xy_position', np.array(
+                np.multiply(self._goals[self._goal_index][:2], 100))),
+            ('target_z_orientation_cos',
+                np.array([np.cos(self._goals[self._goal_index][-1]) * 10])
+            ),
+            ('target_z_orientation_sin',
+                np.array([np.sin(self._goals[self._goal_index][-1]) * 10])
+            ),
         ))
 
     def get_reward_dict(
@@ -325,19 +354,44 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
 
     def _step(self, action: np.ndarray):
         self.robot.step({'dclaw': action})
+        self._last_action = action
 
     def _reset(self):
+        self.robot.set_state({
+            'dclaw': RobotState(qpos=INTERMEDIATE_CLAW_RESET_POSE_0,
+                                qvel=np.zeros(self.action_space.shape[0]))
+        })
+        self.robot.set_state({
+            'dclaw': RobotState(qpos=INTERMEDIATE_CLAW_RESET_POSE_1,
+                                qvel=np.zeros(self.action_space.shape[0]))
+        })
+        self.robot.set_state({
+            'dclaw': RobotState(qpos=INTERMEDIATE_CLAW_RESET_POSE_2,
+                                qvel=np.zeros(self.action_space.shape[0]))
+        })
         self.robot.set_state({
             'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE,
                                 qvel=np.zeros(self.action_space.shape[0]))
         })
+
+        self._last_action = np.zeros(self.action_space.shape[0])
+        # Set the new goal every episode
+        self._goal_index = self._sample_goal()
+
+    def _sample_goal(self):
+        if self._num_goals >= 2:
+            other_indices = [index for index in range(self._num_goals)
+                if index != self._goal_index]
+            sampled_goal = np.random.choice(other_indices)
+        else:
+            sampled_goal = self._goal_index
+        return sampled_goal
 
     def render(self, *args, **kwargs):
         if self._camera_config is not None:
             return self._image_service.get_image(*args, **kwargs)
 
         return super().render(*args, **kwargs)
-
 
 @configurable(pickleable=True)
 class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
