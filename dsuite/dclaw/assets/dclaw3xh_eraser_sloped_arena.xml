@@ -23,6 +23,10 @@ limitations under the License. -->
       <texture file='../scenes/textures/light-wood.png' type="2d" name="tex-light-wood"/>
       <material name="light-wood" reflectance="0.5" texrepeat="15 15" texture="tex-light-wood" texuniform="true"/>
       <material name="screw-material" shininess='0.6' specular='0.35'/>
+      <mesh name="top-slope" vertex="0.15 0.15 0  0.15 0.15 0.05  -0.15 0.15 0  -0.15 0.15 0.05  0.15 0.1 0  -0.15 0.1 0" />
+      <mesh name="bottom-slope" vertex="0.15 -0.15 0  0.15 -0.15 0.05  -0.15 -0.15 0  -0.15 -0.15 0.05  0.15 -0.1 0  -0.15 -0.1 0" />
+      <mesh name="left-slope" vertex="-0.15 0.15 0  -0.15 0.15 0.05  -0.15 -0.15 0  -0.15 -0.15 0.05  -0.1 0.15 0  -0.1 -0.15 0" />
+      <mesh name="right-slope" vertex="0.15 0.15 0  0.15 0.15 0.05  0.15 -0.15 0  0.15 -0.15 0.05  0.1 0.15 0  0.1 -0.15 0" />
     </asset>
 
     <worldbody>
@@ -40,11 +44,14 @@ limitations under the License. -->
         <geom type="box" size="0.005 0.155 0.1" pos="0.15 0 0" material="light-wood"/>
         <geom type="box" size="0.005 0.155 0.1" pos="-0.15 0 0" material="light-wood"/>
         <geom type="box" size="0.155 0.005 0.1" pos="0 -0.15 0" material="light-wood"/>
-        <!-- <geom type="box" size="0.155 0.005 0.1" pos="0 0.15 0" rgba='0 0 0 0' material="light-wood" solref='0.01 0.05' friction='0.1 0.005 0.0001'/> -->
-        <!-- <geom type="box" size="0.005 0.155 0.1" pos="0.15 0 0" rgba='0 0 0 0' material="light-wood" solref='0.01 0.05' friction='0.1 0.005 0.0001'/> -->
-        <!-- <geom type="box" size="0.005 0.155 0.1" pos="-0.15 0 0" rgba='0 0 0 0' material="light-wood" solref='0.01 0.05' friction='0.1 0.005 0.0001'/> -->
-        <!-- <geom type="box" size="0.155 0.005 0.1" pos="0 -0.15 0" rgba='0 0 0 0' material="light-wood" solref='0.01 0.05' friction='0.1 0.005 0.0001'/> -->
-        <!-- <geom type="box" size="0.155 0.155 0.5" pos="0 0 -0.495" material="light-wood" friction='1.0 0.005 0.0001'/> -->
+        <geom type="box" size="0.155 0.005 0.3" pos="0 0.15 0" rgba='0 0 0 0'/>
+        <geom type="box" size="0.005 0.155 0.3" pos="0.15 0 0" rgba='0 0 0 0'/>
+        <geom type="box" size="0.005 0.155 0.3" pos="-0.15 0 0" rgba='0 0 0 0'/>
+        <geom type="box" size="0.155 0.005 0.3" pos="0 -0.15 0" rgba='0 0 0 0'/>
+        <geom type="mesh" mesh="top-slope" material="light-wood"/>
+        <geom type="mesh" mesh="bottom-slope" material="light-wood"/>
+        <geom type="mesh" mesh="right-slope" material="light-wood"/>
+        <geom type="mesh" mesh="left-slope" material="light-wood"/>
       </body>
       <!-- <body name="arena" pos="0 0 0"> -->
       <!--   <include file='../../../dsuite-scenes/dclaw_stations/assets/small_oct_arena.xml'/> -->

@@ -87,12 +87,12 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         """
         self._position_reward_weight = position_reward_weight
         self._camera_config = camera_config
-        self._target_qpos_offset = np.array([0, 0, 0.051, 1.017, 0, 0]) # get from dodecahedron.xml, object['pos', 'euler']
+        self._object_offset = np.array([0, 0, 0.041, 1.017, 0, 0]) # get from dodecahedron.xml, object['pos', 'euler']
 
         super().__init__(
             sim_model=get_asset_path(asset_path),
             robot_config=self.get_config_for_device(
-                device_path, free_object=True, free_claw=free_claw),
+                device_path, free_object=True, free_claw=free_claw, quat=True),
             observation_keys=observation_keys,
             frame_skip=frame_skip,
             **kwargs)
@@ -101,12 +101,13 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         self._last_action = np.zeros(9)
 
         self._target_bid = self.model.body_name2id('target')
+        # self._target_bid = self.model.body_name2id('object_tracker')
 
         # The following are modified (possibly every reset) by subclasses.
         self._set_target_object_qpos((0, 0, 0, 0, 0, 0))
         self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
-        self._initial_object_qpos = (0, 0, 0, 0, 0, 0)
-        self._initial_object_qvel = (0, 0, 0, 0, 0, 0)
+        self._initial_object_qpos = (0, 0, 0, 0, 0, 0, 0)
+        self._initial_object_qvel = (0, 0, 0, 0, 0, 0, 0) #(0, 0, 0, 0, 0, 0)
 
     def _reset(self):
         """Resets the environment."""
@@ -136,12 +137,10 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         claw_state, object_state = self.robot.get_state(['dclaw', 'object'])
 
-        object_position = object_state.qpos[:3].copy()
-        object_quaternion = euler2quat(*object_state.qpos[3:])
-
+        object_position = object_state.qpos[:3].copy()# - self._object_offset[:3]
+        object_quaternion = object_state.qpos[3:] #euler2quat(*object_state.qpos[3:])
         if object_quaternion[0] < 0: # avoid double cover
             object_quaternion = -object_quaternion
-
         target_position = self._object_target_position
         target_quaternion = self._target_quaternion
 
@@ -203,18 +202,16 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             # ('object_to_target_orientation_distance_cost', -5 *
             #     object_to_target_circle_distance),
             ('object_to_target_xy_position_distance_reward',
-             - np.log(20 * (object_to_target_xy_position_distance + 0.01))),
+             - np.log(10 * object_to_target_xy_position_distance + 0.01)),
             ('object_to_target_z_position_distance_reward',
-             - np.log(30 * (object_to_target_z_position_distance + 0.005))),
+             - np.log(15 * object_to_target_z_position_distance + 0.01)),
             ('object_to_target_orientation_distance_reward',
-             - np.log(3 * (object_to_target_sphere_distance + 0.005))),
-
+             - np.log(object_to_target_sphere_distance + 0.01)),
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
              -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)),
             # Penality for high velocities.
             ('joint_vel_cost', -1 * np.linalg.norm(claw_vel[claw_vel >= 0.5])),
-
             # Reward for close proximity with goal.
             ('bonus_small', 10 * (object_to_target_sphere_distance < 0.5)),
             ('bonus_big', 50 * (object_to_target_sphere_distance < 0.20)),
@@ -236,16 +233,15 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
     def _set_target_object_qpos(self, target_qpos: float):
         """Sets the goal position and orientation."""
-        # Modulo to [-pi, pi].
-        self._object_target_position = target_qpos[:3]
-        self._object_target_orientation = np.mod(
-            np.array(target_qpos[3:]) + np.pi, 2 * np.pi) - np.pi
 
         # Mark the target position in sim.
-        self.model.body_pos[self._target_bid] = self._object_target_position + self._target_qpos_offset[:3]
-        # self.model.body_quat[self._target_bid] = euler2quat(
-        #     *self._object_target_orientation)
-        quat = euler2quat(*self._object_target_orientation + self._target_qpos_offset[3:])
+        self._object_target_position = target_qpos[:3] + self._object_offset[:3]
+        self.model.body_pos[self._target_bid] = self._object_target_position
+
+        # Modulo to [-pi, pi].
+        target_euler = np.mod(
+            np.array(target_qpos[3:]) + np.pi, 2 * np.pi) - np.pi
+        quat = euler2quat(*target_euler + self._object_offset[3:])
         if quat[0] < 0: # avoid double cover
             quat = -quat
         self.model.body_quat[self._target_bid] = self._target_quaternion = quat
@@ -293,13 +289,52 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
     """Turns the dodecahedron with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 init_qpos_range=[(0, 0, 0, 0, 0, 0)],
-                 target_qpos_range=[(0, 0, 0.05, 0, 0, np.pi)],
+                 init_qpos_range=(
+                     (0, 0, 0.041, 1.017, 0, 0),
+                     (0, 0, 0.041, 1.017, 0, 0)
+                 ), # [(0, 0, 0.041, 1.017, 0, 0)], # default global init pos, green faces up
+                 target_qpos_range=[  # target pos relative to init
+                     (0, 0, 0.05, 0, 0, np.pi),
+                     (0, 0, 0.05, np.pi, 0, 0), # bgreen side up
+                     (0, 0, 0.05, 1.017, 0, 2*np.pi/5), # black side up
+                 ],
                  asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml',
+                 reset_policy_checkpoint_path='/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
                  *args, **kwargs):
         self._init_qpos_range = init_qpos_range
         self._target_qpos_range = target_qpos_range
         super().__init__(asset_path=asset_path, *args, **kwargs)
+        self._reset_horizon = 0
+        self._policy = None
+        if reset_policy_checkpoint_path:
+            self._load_policy(reset_policy_checkpoint_path)
+
+    def _load_policy(self, checkpoint_path):
+        import pickle
+        from softlearning.policies.utils import get_policy_from_variant
+        checkpoint_path = checkpoint_path.rstrip('/')
+        experiment_path = os.path.dirname(checkpoint_path)
+
+        variant_path = os.path.join(experiment_path, 'params.pkl')
+        with open(variant_path, 'rb') as f:
+            variant = pickle.load(f)
+
+        policy_weights_path = os.path.join(checkpoint_path, 'policy_params.pkl')
+        with open(policy_weights_path, 'rb') as f:
+            policy_weights = pickle.load(f)
+
+        from softlearning.environments.adapters.gym_adapter import GymAdapter
+        from softlearning.environments.gym.wrappers import (
+            NormalizeActionWrapper)
+
+        env = GymAdapter(None, None, env=NormalizeActionWrapper(self))
+
+        self._policy = (
+            get_policy_from_variant(variant, env))
+        self._policy.set_weights(policy_weights)
+        self._reset_horizon = variant['sampler_params']['kwargs']['max_path_length']
+
+        self._reset_target_qpos_range = variant['environment_params']['training']['kwargs']['target_qpos_range']
 
     def _sample_goal(self, obs_dict):
         if isinstance(self._target_qpos_range, (list,)):
@@ -320,47 +355,106 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
             self._initial_object_qpos = np.random.uniform(
                 low=self._init_qpos_range[0], high=self._init_qpos_range[1]
             )
+
+        self._initial_object_qpos = np.concatenate([
+            self._initial_object_qpos[:3],
+            euler2quat(*self._initial_object_qpos[3:])
+        ])
         self._set_target_object_qpos(
             self._sample_goal(self.get_obs_dict()))
         super()._reset()
 
+    def get_policy_input(self):
+        from softlearning.models.utils import flatten_input_structure
+        obs_dict = self.get_obs_dict()
+        observation = flatten_input_structure({
+            key: obs_dict[key][None, ...]
+            for key in self._policy.observation_keys
+        })
+        return observation
+
+    def reset(self):
+        self.sim.reset()
+        self.sim.forward()
+        self._reset()
+
+        target_qpos_range = self._target_qpos_range
+        self._target_qpos_range = self._reset_target_qpos_range
+        self._set_target_object_qpos(
+            self._sample_goal(self.get_obs_dict()))
+
+        for _ in range(self._reset_horizon):
+            policy_input = self.get_policy_input()
+            action = self._policy.actions_np(policy_input)[0]
+            self.step(action)
+
+        self._target_qpos_range = target_qpos_range
+        self._set_target_object_qpos(
+            self._sample_goal(self.get_obs_dict()))
+
+        obs_dict = self.get_obs_dict()
+        self.last_obs_dict = obs_dict
+        self.last_reward_dict = None
+        self.last_score_dict = None
+        self.is_done = False
+
+        return self._get_obs(obs_dict)
+
 
 @configurable(pickleable=True)
-class DClawLiftDDResetFree(BaseDClawLiftFreeObject):
+class DClawLiftDDResetFree(DClawLiftDDFixed):
     """Turns the object reset-free with a fixed initial and varied target positions."""
 
     def __init__(self,
                  swap_goal_upon_completion: bool = True,
                  reset_fingers=True,
                  position_reward_weight=1,
+                 # target_qpos_range=(
+                 #     (-0.1, -0.1, 0.0, 0, 0, 0),
+                 #     (0.1, 0.1, 0.0, 0, 0, 0), # bgreen side up
+                 # ),
+                 #  target pos relative to init
+                 target_qpos_range = [
+                     (0, 0, 0.05, 0, 0, 0),
+                     # (0, 0, 0, np.pi, 0, 0), # bgreen side up
+                     # (0, 0, 0, 1.017, 0, 2*np.pi/5), # black side up
+                 ],
+                 init_qpos_range = [(-0.08, -0.08, 0.041, 1.017, 0, 0)],
+                 reset_frequency: int = 0,
+                 reset_policy_checkpoint_path='', # '/home/abhigupta/ray_results/gym/DClaw/LiftDDResetFree-v0/2019-08-12T22-28-02-random_translate/id=1efced72-seed=3335_2019-08-12_22-28-03bqyu82da/checkpoint_1500/',
                  **kwargs):
         self._last_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
         self._last_object_position = np.array([0, 0, 0])
         self._last_object_orientation = np.array([0, 0, 0])
         self._reset_fingers = reset_fingers
+        self._reset_frequency = reset_frequency
+        self._reset_counter = 0
 
-        super().__init__(**kwargs)
+        super().__init__(reset_policy_checkpoint_path=reset_policy_checkpoint_path, **kwargs)
+        self._target_qpos_range = target_qpos_range
+        self._init_qpos_range = init_qpos_range
         self._swap_goal_upon_completion = swap_goal_upon_completion
-        # self._goals = [(-0.06, -0.08, 0, 0, 0, 0), (-0.06, -0.08, 0, 0, 0, 0)]
-        self._goals = ((0, 0, 0, 0, 0, np.pi), (0, 0, 0, 0, 0, np.pi))
-        self._goal_index = 1
-
         self._position_reward_weight = position_reward_weight
+        self._reset_target_qpos_range = [(0, 0, 0.041, 0, 0, 0)]
 
     def _sample_goal(self, obs_dict):
-        # object_to_target_position_distance = obs_dict['object_to_target_position_distance']
-        # object_to_target_orientation_distance = obs_dict['object_to_target_circle_distance']
-        # if self._swap_goal_upon_completion and \
-        #    object_to_target_orientation_distance < 0.1 and \
-        #    object_to_target_position_distance < 0.01:
-        #     self._goal_index = np.mod(self._goal_index + 1, 2)
-        # else:
-        goal = (0, 0, 0, 0, 0, np.pi)
-
-        #goal = self._goals[self._goal_index]
-        return goal
+        if isinstance(self._target_qpos_range, (list,)):
+            rand_index = np.random.randint(len(self._target_qpos_range))
+            target_qpos = np.array(self._target_qpos_range[rand_index])
+        elif isinstance(self._target_qpos_range, (tuple,)):
+            target_qpos = np.random.uniform(
+                low=self._target_qpos_range[0],
+                high=self._target_qpos_range[1]
+            )
+        return target_qpos
 
     def reset(self):
+        self._reset_counter += 1
+        if self._reset_frequency \
+           and self._reset_counter % self._reset_frequency == 0:
+            self._reset_counter = 0
+            return super().reset()
+
         obs_dict = self.get_obs_dict()
         dclaw_config = self.robot.get_config('dclaw')
         dclaw_control_mode = dclaw_config.control_mode
@@ -372,4 +466,63 @@ class DClawLiftDDResetFree(BaseDClawLiftFreeObject):
                 self._step(reset_action)
         self._set_target_object_qpos(self._sample_goal(obs_dict))
         dclaw_config.set_control_mode(dclaw_control_mode)
+
+        if self._policy:
+            target_qpos_range = self._target_qpos_range
+            self._target_qpos_range = self._reset_target_qpos_range
+            self._set_target_object_qpos(
+                self._sample_goal(self.get_obs_dict()))
+
+            for _ in range(self._reset_horizon):
+                policy_input = self.get_policy_input()
+                action = self._policy.actions_np(policy_input)[0]
+                self.step(action)
+
+            self._target_qpos_range = target_qpos_range
+            self._set_target_object_qpos(
+                self._sample_goal(self.get_obs_dict()))
+
         return self._get_obs(self.get_obs_dict())
+
+
+@configurable(pickleable=True)
+class DClawLiftDDResetFreeComposedGoals(DClawLiftDDResetFree):
+    """ Multistage of translating to origin, lifting, then reorienting. """
+
+    def __init__(self,
+                 goals=[
+                     (0, 0, 0, 0, 0, 0),
+                     (0, 0, 0.05, 0, 0, 0),
+                     (0, 0, 0, np.pi, 0, 0)
+                 ],
+                 **kwargs):
+        super().__init__(
+            **kwargs)
+        self._goal_index = 0
+        self._goals = np.array(goals)
+        self.n_goals = len(self._goals)
+
+    @property
+    def num_goals(self):
+        return len(self._goals)
+
+    def set_goal(self, goal_index):
+        """Allow outside algorithms to alter goals."""
+        self._goal_index = goal_index
+
+    def _sample_goal(self, obs_dict):
+        return self._goals[self._goal_index]
+
+    def get_reward_dict(self, action, obs_dict):
+        """ Alter rewards based on goal. """
+        reward_dict = super().get_reward_dict(action, obs_dict)
+        if self._goal_index == 0:
+            reward_dict['object_to_target_z_position_distance_reward'] *= 0
+            reward_dict['object_to_target_orientation_distance_reward'] *= 0
+        elif self._goal_index == 1:
+            reward_dict['object_to_target_xy_position_distance_reward'] *= 0
+            reward_dict['object_to_target_orientation_distance_reward'] *= 0
+        else:
+            reward_dict['object_to_target_z_position_distance_reward'] *= 0
+            reward_dict['object_to_target_xy_position_distance_reward'] *= 0
+        return reward_dict
