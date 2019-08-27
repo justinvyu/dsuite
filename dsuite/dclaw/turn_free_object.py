@@ -466,7 +466,7 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
         self._reset_fingers = reset_fingers
         self._reset_frequency = reset_frequency
         self._reset_counter = 0
-        self._take_random_actions = take_random_actions
+        self._take_random_actions_for = take_random_actions_for
 
         self._path_length = path_length
         self._step_count = 0
@@ -500,10 +500,9 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
         dclaw_config = self.robot.get_config('dclaw')
         dclaw_control_mode = dclaw_config.control_mode
         dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
-        if self._take_random_actions:
-            for _ in range(50):
-                rand_action = np.random.uniform(low=-1, high=1, size=(9,))
-                self._step(rand_action)
+        for _ in range(self._take_random_actions_for):
+            rand_action = np.random.uniform(low=-1, high=1, size=(9,))
+            self._step(rand_action)
 
         if self._reset_fingers:
             reset_action = self.robot.normalize_action(
