@@ -549,7 +549,6 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
             self._reset_counter = 0
             return super().reset()
 
-        obs_dict = self.get_obs_dict()
         dclaw_config = self.robot.get_config('dclaw')
         dclaw_control_mode = dclaw_config.control_mode
         dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
@@ -563,6 +562,7 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
 
             for _ in range(15):
                 self._step(reset_action)
+
         dclaw_config.set_control_mode(dclaw_control_mode)
 
         if self._policy:
@@ -577,7 +577,11 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
                 self.step(action)
 
             self._target_qpos_range = target_qpos_range
-        self._set_target_object_qpos(self._sample_goal(obs_dict))
+            self._set_target_object_qpos(
+                super()._sample_goal(self.get_obs_dict()))
+        else:
+            self._set_target_object_qpos(
+                self._sample_goal(self.get_obs_dict()))
         return self._get_obs(self.get_obs_dict())
 
 
