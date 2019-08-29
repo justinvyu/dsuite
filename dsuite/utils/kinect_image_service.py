@@ -74,7 +74,20 @@ class KinectImageService(object):
         #       f" | Total delay: {total_delay:6.3f}")
 
     def get_image(self, *args, width=32, height=32, **kwargs):
-        assert self.image.shape[:2] == (width, height)
+        if self.image.shape[:2] != (width, height):
+            old_width, old_height = self.image.shape[:2]
+            assert old_width >= width and old_height >= height
+            old_image = self.image.copy()
+            # skimage requires the image be converted to float first
+            float_img = skimage.util.img_as_float(old_image)
+            assert old_width % width == 0 and old_height % height == 0
+            width_factor = old_width // width
+            height_factor = old_height // height
+            downsampled = skimage.transform.downscale_local_mean(
+                float_img, (width_factor, height_factor, 1))
+            # Convert back to uint8
+            downsampled = skimage.util.img_as_ubyte(downsampled)
+            return downsampled
 
         # old_image = self.image.copy()
 
@@ -85,7 +98,7 @@ class KinectImageService(object):
         #     self._same_frame_count = 0
 
         # if self._same_frame_count > 100:
-
+        assert self.image.shape[:2] == (width, height)
         return self.image
 
 
