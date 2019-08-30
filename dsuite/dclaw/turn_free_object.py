@@ -510,6 +510,7 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
                  #     (0.04, 0.04, 0, 0, 0, 0)
                  # ),
                  init_qpos_range=[(0, 0, 0, 0, 0, 0)],
+                 swap_goal_frequency=1,
                  take_random_actions_for=0,
                  reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/TurnFreeValve3ResetFree-v0/2019-08-22T12-37-40-random_translate_centered_around_origin/id=4de1a720-seed=779_2019-08-22_12-37-41qqs0v4da/checkpoint_200/',
                  **kwargs):
@@ -530,6 +531,8 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
         self._swap_goal_upon_completion = swap_goal_upon_completion
         self._target_qpos_range = target_qpos_range
         self._init_qpos_range = init_qpos_range
+        self._swap_goal_frequency = swap_goal_frequency
+        self._traj_count = 0
 
     def _step(self, action):
         super()._step(action)
@@ -542,6 +545,7 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
 
     def reset(self):
         self._step_count = 0
+        self._traj_count += 1
 
         self._reset_counter += 1
         if self._reset_frequency \
@@ -580,8 +584,10 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
             self._set_target_object_qpos(
                 super()._sample_goal(self.get_obs_dict()))
         else:
-            self._set_target_object_qpos(
-                self._sample_goal(self.get_obs_dict()))
+            if self._traj_count % self._swap_goal_frequency == 0:
+                self._set_target_object_qpos(
+                    self._sample_goal(self.get_obs_dict()))
+
         return self._get_obs(self.get_obs_dict())
 
 
