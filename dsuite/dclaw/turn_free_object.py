@@ -603,6 +603,7 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
                  #        (0.01, -0.01, 0, 0, 0, 0)],
 
                  #observation_keys=DEFAULT_OBSERVATION_KEYS,
+                 choose_furthest_goal=True,
                  **kwargs):
         super().__init__(
             #observation_keys=observation_keys + ('other_reward',),
@@ -610,6 +611,7 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
         self._goal_index = 0
         self._goals = np.array(goals)
         self.n_goals = len(self._goals)
+        self._choose_furthest_goal = choose_furthest_goal
 
     # def get_obs_dict(self):
     #     obs_dict = super().get_obs_dict()
@@ -643,9 +645,19 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
         return path
 
     def _sample_goal(self, obs_dict):
-        other_goal_inds = [i for i in range(self.n_goals) if i != self._goal_index]
-        self._goal_index = np.random.choice(other_goal_inds)
-        # self._goal_index = (self._goal_index + 1) % self.n_goals
+        if self._choose_furthest_goal:
+            goal_rewards = []
+            for goal_index in range(self.n_goals):
+                self._set_target_object_qpos(self._goals[goal_index])
+                goal_reward = self._get_total_reward(self.get_reward_dict(None, self.get_obs_dict()))
+                goal_rewards.append(goal_reward)
+            print(goal_rewards)
+            goal_rewards = np.array(goal_rewards)
+            self._goal_index = np.argmin(goal_rewards)
+        else:
+            other_goal_inds = [i for i in range(self.n_goals) if i != self._goal_index]
+            self._goal_index = np.random.choice(other_goal_inds)
+            # self._goal_index = (self._goal_index + 1) % self.n_goals
         return self._goals[self._goal_index]
 
     def _reset(self):
