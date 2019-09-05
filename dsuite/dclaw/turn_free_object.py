@@ -54,12 +54,7 @@ DEFAULT_OBSERVATION_KEYS = (
     'target_xy_position',
     'target_z_orientation_cos',
     'target_z_orientation_sin',
-
-    # 'target_angle',
-    # 'target_orientation_cos',
-    # 'target_orientation_sin',
-    # 'object_to_target_relative_position',
-    # 'in_corner',
+    'goal_index',
 )
 
 DEFAULT_HARDWARE_OBSERVATION_KEYS = (
@@ -611,18 +606,14 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
         self._goal_index = 0
         self._goals = np.array(goals)
         self.n_goals = len(self._goals)
+        self._reset_target_qpos_range = [(0, 0, 0, 0, 0, 0)]
         self._choose_furthest_goal = choose_furthest_goal
 
-    # def get_obs_dict(self):
-    #     obs_dict = super().get_obs_dict()
+    def get_obs_dict(self):
+        obs_dict = super().get_obs_dict()
 
-        # self._set_target_object_qpos(self._sample_goal(None))
-        # swapped_goal_obs_dict = super().get_obs_dict()
-        # self._set_target_object_qpos(self._sample_goal(None))
-
-        # obs_dict['other_reward'] = [self._get_total_reward(
-        #     self.get_reward_dict(None, swapped_goal_obs_dict))]
-        # return obs_dict
+        obs_dict['goal_index'] = np.array([self._goal_index])
+        return obs_dict
 
     def relabel_path(self, path):
         observations = path['observations']
@@ -713,6 +704,12 @@ class DClawTurnFreeValve3ResetFreeSwapGoalEval(DClawTurnFreeValve3Fixed):
         self._goal_index = goal_index
         self._set_target_object_qpos(self._goals[self._goal_index])
         self._set_goal = True
+
+    def get_obs_dict(self):
+        obs_dict = super().get_obs_dict()
+
+        obs_dict['goal_index'] = np.array([self._goal_index])
+        return obs_dict
 
     def _reset(self):
         if not self._set_goal:
@@ -920,7 +917,6 @@ class DClawTurnFreeValve3Image(DClawTurnFreeValve3Fixed):
 class DClawTurnFreeValve3MultiGoal(DClawTurnFreeValve3Fixed):
     def __init__(
             self,
-            *args,
             goals = False,
             goal_completion_position_threshold: float = 0.05,
             goal_completion_orientation_threshold: float = 0.15,
@@ -934,7 +930,7 @@ class DClawTurnFreeValve3MultiGoal(DClawTurnFreeValve3Fixed):
             random_goal_sampling: bool = False,
             one_hot_goal_index: bool = False,
             **kwargs):
-        super().__init__(*args, observation_keys=observation_keys, **kwargs)
+        super().__init__(observation_keys=observation_keys, **kwargs)
         self._goals = goals
         self._num_goals = len(goals)
         self._goal_index = initial_goal_index
