@@ -289,17 +289,18 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
     """Turns the dodecahedron with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 init_qpos_range=(
-                     (0, 0, 0.041, 1.017, 0, 0),
-                     (0, 0, 0.041, 1.017, 0, 0)
-                 ), # [(0, 0, 0.041, 1.017, 0, 0)], # default global init pos, green faces up
+                 # init_qpos_range=(
+                 #     (-0.08, -0.08, 0.041, 1.017, 0, 0),
+                 #     (-0.08, -0.08, 0.041, 1.017, 0, 0)
+                 # ),
+                 init_qpos_range=[(0, 0, 0.041, 1.017, 0, 0)], # default global init pos, green faces up
                  target_qpos_range=[  # target pos relative to init
                      (0, 0, 0.05, 0, 0, np.pi),
                      (0, 0, 0.05, np.pi, 0, 0), # bgreen side up
                      (0, 0, 0.05, 1.017, 0, 2*np.pi/5), # black side up
                  ],
-                 asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml',
-                 reset_policy_checkpoint_path='/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
+                 asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron_bowl.xml',
+                 reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
                  *args, **kwargs):
         self._init_qpos_range = init_qpos_range
         self._target_qpos_range = target_qpos_range
@@ -378,17 +379,18 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
         self.sim.forward()
         self._reset()
 
-        target_qpos_range = self._target_qpos_range
-        self._target_qpos_range = self._reset_target_qpos_range
-        self._set_target_object_qpos(
-            self._sample_goal(self.get_obs_dict()))
+        if self._policy:
+            target_qpos_range = self._target_qpos_range
+            self._target_qpos_range = self._reset_target_qpos_range
+            self._set_target_object_qpos(
+                self._sample_goal(self.get_obs_dict()))
 
-        for _ in range(self._reset_horizon):
-            policy_input = self.get_policy_input()
-            action = self._policy.actions_np(policy_input)[0]
-            self.step(action)
+            for _ in range(self._reset_horizon):
+                policy_input = self.get_policy_input()
+                action = self._policy.actions_np(policy_input)[0]
+                self.step(action)
 
-        self._target_qpos_range = target_qpos_range
+            self._target_qpos_range = target_qpos_range
         self._set_target_object_qpos(
             self._sample_goal(self.get_obs_dict()))
 
