@@ -598,7 +598,7 @@ class DClawTurnFreeValve3ResetFreeSwapGoal(DClawTurnFreeValve3ResetFree):
                  #        (0.01, -0.01, 0, 0, 0, 0)],
 
                  #observation_keys=DEFAULT_OBSERVATION_KEYS,
-                 choose_furthest_goal=True,
+                 choose_furthest_goal=False,
                  **kwargs):
         super().__init__(
             #observation_keys=observation_keys + ('other_reward',),
