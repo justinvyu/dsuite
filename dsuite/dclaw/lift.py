@@ -26,14 +26,20 @@ from typing import Dict, Optional, Sequence
 import numpy as np
 from transforms3d.euler import euler2quat
 
-from dsuite.dclaw.base_env import (BaseDClawObjectEnv,
-                                   BaseDClawEnv,
-                                   DEFAULT_CLAW_RESET_POSE)
+from dsuite.dclaw.base_env import (
+    BaseDClawObjectEnv,
+    BaseDClawEnv,
+    DEFAULT_CLAW_RESET_POSE)
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance, quat_distance
 from dsuite.components.robot.config import ControlMode
 from dsuite.components.robot import RobotState
+from dsuite.dclaw.turn_free_object import (
+    INTERMEDIATE_CLAW_RESET_POSE_0,
+    INTERMEDIATE_CLAW_RESET_POSE_1,
+    INTERMEDIATE_CLAW_RESET_POSE_2
+)
 
 
 # The observation keys that are concatenated as the environment observation.
@@ -66,16 +72,17 @@ DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml'
 
 class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     """Shared logic for DClaw turn tasks."""
-
-    def __init__(self,
-                 asset_path: str = DCLAW3_ASSET_PATH,
-                 observation_keys: Sequence[str] = DEFAULT_OBSERVATION_KEYS,
-                 device_path: Optional[str] = None,
-                 camera_config: dict = None,
-                 frame_skip: int = 40,
-                 free_claw: bool = False,
-                 position_reward_weight: int = 1,
-                 **kwargs):
+    def __init__(
+            self,
+            asset_path: str = DCLAW3_ASSET_PATH,
+            observation_keys: Sequence[str] = DEFAULT_OBSERVATION_KEYS,
+            device_path: Optional[str] = None,
+            camera_config: dict = None,
+            frame_skip: int = 40,
+            free_claw: bool = False,
+            position_reward_weight: int = 1,
+            **kwargs
+    ):
         """Initializes the environment.
 
         Args:
@@ -87,7 +94,9 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         """
         self._position_reward_weight = position_reward_weight
         self._camera_config = camera_config
-        self._object_offset = np.array([0, 0, 0.041, 1.017, 0, 0]) # get from dodecahedron.xml, object['pos', 'euler']
+        self._object_offset = np.array(
+            [0, 0, 0.041, 1.017, 0, 0]
+        )  # get from dodecahedron.xml, object['pos', 'euler']
 
         super().__init__(
             sim_model=get_asset_path(asset_path),
@@ -105,7 +114,7 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         # The following are modified (possibly every reset) by subclasses.
         self._set_target_object_qpos((0, 0, 0, 0, 0, 0))
-        self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
+        self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy() * 0.8
         self._initial_object_qpos = (0, 0, 0, 0, 0, 0, 0)
         self._initial_object_qvel = (0, 0, 0, 0, 0, 0, 0) #(0, 0, 0, 0, 0, 0)
 
@@ -463,8 +472,20 @@ class DClawLiftDDResetFree(DClawLiftDDFixed):
         dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
         if self._reset_fingers:
             reset_action = self.robot.normalize_action(
+                {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_0})['dclaw']
+            for _ in range(10):
+                self._step(reset_action)
+            reset_action = self.robot.normalize_action(
+                {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_1})['dclaw']
+            for _ in range(10):
+                self._step(reset_action)
+            reset_action = self.robot.normalize_action(
+                {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_2})['dclaw']
+            for _ in range(10):
+                self._step(reset_action)
+            reset_action = self.robot.normalize_action(
                 {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
-            for _ in range(15):
+            for _ in range(10):
                 self._step(reset_action)
         self._set_target_object_qpos(self._sample_goal(obs_dict))
         dclaw_config.set_control_mode(dclaw_control_mode)
