@@ -72,8 +72,6 @@ DEFAULT_HARDWARE_OBSERVATION_KEYS = (
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_less_tiny_box.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_fixed_tiny_box.xml'
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_free.xml'
-# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_free_cube.xml'
-
 
 class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     """Shared logic for DClaw turn tasks."""
@@ -86,6 +84,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
                  frame_skip: int = 40,
                  free_claw: bool = False,
                  position_reward_weight: int = 1,
+                 use_bowl_arena: bool = False,
                  **kwargs):
         """Initializes the environment.
 
@@ -98,6 +97,9 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         """
         self._position_reward_weight = position_reward_weight
         self._camera_config = camera_config
+        self._use_bowl_arena = use_bowl_arena
+        if self._use_bowl_arena:
+            asset_path = 'dsuite/dclaw/assets/dclaw3xh_valve4_bowl.xml'
         super().__init__(
             sim_model=get_asset_path(asset_path),
             robot_config=self.get_config_for_device(
@@ -200,6 +202,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             ('object_to_target_circle_distances', object_to_target_circle_distance),
             ('object_to_target_circle_distance', np.linalg.norm(object_to_target_circle_distance)),
             ('in_corner', np.array([in_corner])),
+            ('goal_index', np.array([0])),
         ))
 
     def get_reward_dict(
@@ -556,11 +559,28 @@ class DClawTurnFreeValve3ResetFree(DClawTurnFreeValve3Fixed):
             self._step(rand_action)
 
         if self._reset_fingers:
-            reset_action = self.robot.normalize_action(
-                {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
-
-            for _ in range(15):
-                self._step(reset_action)
+            if self._use_bowl_arena:
+                reset_action = self.robot.normalize_action(
+                    {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_0})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+                    reset_action = self.robot.normalize_action(
+                        {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_1})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+                    reset_action = self.robot.normalize_action(
+                        {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_2})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+                    reset_action = self.robot.normalize_action(
+                        {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+            else:
+                reset_action = self.robot.normalize_action(
+                    {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
+                for _ in range(15):
+                    self._step(reset_action)
 
         dclaw_config.set_control_mode(dclaw_control_mode)
 

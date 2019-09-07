@@ -308,11 +308,15 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
                      (0, 0, 0.05, np.pi, 0, 0), # bgreen side up
                      (0, 0, 0.05, 1.017, 0, 2*np.pi/5), # black side up
                  ],
-                 asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron_bowl.xml',
+                 asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml',
                  reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
+                 use_bowl_arena=True,
                  *args, **kwargs):
         self._init_qpos_range = init_qpos_range
         self._target_qpos_range = target_qpos_range
+        self._use_bowl_arena = use_bowl_arena
+        if self._use_bowl_arena:
+            asset_path = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron_bowl.xml'
         super().__init__(asset_path=asset_path, *args, **kwargs)
         self._reset_horizon = 0
         self._policy = None
@@ -470,23 +474,31 @@ class DClawLiftDDResetFree(DClawLiftDDFixed):
         dclaw_config = self.robot.get_config('dclaw')
         dclaw_control_mode = dclaw_config.control_mode
         dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
+
         if self._reset_fingers:
-            reset_action = self.robot.normalize_action(
-                {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_0})['dclaw']
-            for _ in range(10):
-                self._step(reset_action)
-            reset_action = self.robot.normalize_action(
-                {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_1})['dclaw']
-            for _ in range(10):
-                self._step(reset_action)
-            reset_action = self.robot.normalize_action(
-                {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_2})['dclaw']
-            for _ in range(10):
-                self._step(reset_action)
-            reset_action = self.robot.normalize_action(
-                {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
-            for _ in range(10):
-                self._step(reset_action)
+            if self._use_bowl_arena:
+                reset_action = self.robot.normalize_action(
+                    {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_0})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+                    reset_action = self.robot.normalize_action(
+                        {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_1})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+                    reset_action = self.robot.normalize_action(
+                        {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_2})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+                    reset_action = self.robot.normalize_action(
+                        {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+            else:
+                reset_action = self.robot.normalize_action(
+                    {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
+                for _ in range(15):
+                    self._step(reset_action)
+
         self._set_target_object_qpos(self._sample_goal(obs_dict))
         dclaw_config.set_control_mode(dclaw_control_mode)
 
