@@ -418,12 +418,15 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
                  target_qpos_range=((-0.08, -0.08, 0, 0, 0, 0), (0.08, 0.08, 0, 0, 0, 0)),
                  init_qpos_range=((-0.08, -0.08, 0, 0, 0, -np.pi), (0.08, 0.08, 0, 0, 0, np.pi)),
                  reset_policy_checkpoint_path='', #'/
+                 cycle_goals=False,
                  *args,
                  **kwargs):
         self._init_qpos_range = init_qpos_range
         self._target_qpos_range = target_qpos_range
         super().__init__(*args, **kwargs)
         self._policy = None
+        self._cycle_goals = cycle_goals
+        self._goal_index = 0
         if reset_policy_checkpoint_path:
             self._load_policy(reset_policy_checkpoint_path)
 
@@ -454,10 +457,28 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
 
         self._reset_target_qpos_range = variant['environment_params']['training']['kwargs']['target_qpos_range']
 
+    @property
+    def num_goals(self):
+        if isinstance(self._target_qpos_range, (list,)):
+            return len(self._target_qpos_range)
+        else:
+            raise Exception("infinite goals")
+
+    def set_goal(self, goal_index):
+        """Allow outside algorithms to alter goals."""
+        self._goal_index = goal_index
+        self._cycle_goals = True
+        self._let_alg_set_goals = True
+
     def _sample_goal(self, obs_dict):
         if isinstance(self._target_qpos_range, (list,)):
-            rand_index = np.random.randint(len(self._target_qpos_range))
-            target_qpos = np.array(self._target_qpos_range[rand_index])
+            if self._cycle_goals:
+                if not self._let_alg_set_goals:
+                    self._goal_index = (self._goal_index + 1) % self.num_goals
+                target_qpos = self._target_qpos_range[self._goal_index]
+            else:
+                rand_index = np.random.randint(len(self._target_qpos_range))
+                target_qpos = np.array(self._target_qpos_range[rand_index])
         elif isinstance(self._target_qpos_range, (tuple,)):
             target_qpos = np.random.uniform(
                 low=self._target_qpos_range[0],

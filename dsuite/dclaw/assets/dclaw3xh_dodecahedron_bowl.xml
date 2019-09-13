@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. -->
 
-<mujoco model='dclaw3xh_octahedron'>
+<mujoco model='dclaw3xh_flat_bowl_arena'>
     <include file='../../../dsuite-scenes/scenes/basic_scene.xml' />
     <include file='../../../dsuite-scenes/dclaw/assets/dependencies3xh.xml' />
     <include file='../../../dsuite-scenes/dclaw_stations/assets/dependencies.xml' />
@@ -43,7 +43,7 @@ limitations under the License. -->
       <!--   <!-\- <geom type="box" size="0.155 0.155 0.01" pos="0 0 0" material="light-wood" friction='0.1 0.005 0.0001'/> -\-> -->
       <!-- </body> -->
       <body name="arena" pos="0 0 0">
-        <include file='../../../dsuite-scenes/dclaw_stations/assets/bowl_arena.xml'/>
+        <include file='../../../dsuite-scenes/dclaw_stations/assets/flat_bowl_arena.xml'/>
       </body>
 
     </worldbody>
