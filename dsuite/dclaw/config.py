@@ -130,6 +130,20 @@ DCLAW_FREE_OBJECT_QUAT_SIM_CONFIG = merge_configs(
     DCLAW_SIM_CONFIG, _FREE_OBJECT_QUAT_SIM_CONFIG)
 
 
+def get_dclaw_beads_config(num_beads):
+    beads_config = _FREE_OBJECT_SIM_CONFIG
+    beads_config['groups'].update({
+        f'object_{i}': {
+            'qpos_indices': [-num_beads + i],
+            'qpos_range': [(-0.11, 0.11)],
+            'sim_observation_noise': 0.00,
+        }
+        for i in range(num_beads)
+    })
+    return merge_configs(
+        DCLAW_SIM_CONFIG, beads_config)
+
+
 # Configuration for a DClaw with an object in hardware.
 DCLAW_OBJECT_HARDWARE_CONFIG = merge_configs(
     DCLAW_HARDWARE_CONFIG,

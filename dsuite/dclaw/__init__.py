@@ -194,3 +194,19 @@ register(
     env_id='DClawScrewRandomDynamics-v0',
     class_path='dsuite.dclaw.screw:DClawScrewRandomDynamics',
     max_episode_steps=_SCREW_EPISODE_LEN)
+
+#===============================================================================
+# Slide Object tasks
+#===============================================================================
+
+register(
+    env_id='DClawSlideBeadsFixed-v0',
+    class_path='dsuite.dclaw.slide:DClawSlideBeadsFixed')
+
+register(
+    env_id='DClawSlideBeadsResetFree-v0',
+    class_path='dsuite.dclaw.slide:DClawSlideBeadsResetFree')
+
+register(
+    env_id='DClawSlideBeadsResetFreeEval-v0',
+    class_path='dsuite.dclaw.slide:DClawSlideBeadsResetFreeEval')
