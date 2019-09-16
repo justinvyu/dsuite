@@ -96,6 +96,7 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             self._initial_objects_qpos = [0, 0]
             self._initial_objects_qvel = [0, 0] #(0, 0, 0, 0, 0, 0)
             asset_path = 'dsuite/dclaw/assets/dclaw3xh_beads.xml'
+            self._objects_target_positions = [0, 0]
         elif self._num_beads == 4:
             self._objects_offsets = np.array(
                 [-0.0525, -0.0175, 0.0175, 0.0525]
