@@ -50,6 +50,7 @@ DEFAULT_OBSERVATION_KEYS = (
     'objects_positions',
     'last_action',
     'objects_target_positions',
+    'goal_index',
 )
 
 DEFAULT_HARDWARE_OBSERVATION_KEYS = (
@@ -313,11 +314,16 @@ class DClawSlideBeadsFixed(BaseDClawSlideFreeObject):
         self._cycle_goals = cycle_goals
         self._goal_index = 0
         self._let_alg_set_goals = False
-
         # self._reset_horizon = 0
         # self._policy = None
         # if reset_policy_checkpoint_path:
         #     self._load_policy(reset_policy_checkpoint_path)
+
+    def get_obs_dict(self):
+        obs_dict = super().get_obs_dict()
+
+        obs_dict['goal_index'] = np.array([self._goal_index])
+        return obs_dict
 
     def _load_policy(self, checkpoint_path):
         import pickle
