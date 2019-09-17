@@ -61,6 +61,7 @@ DEFAULT_HARDWARE_OBSERVATION_KEYS = (
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_octahedron.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml'
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_eraser_sloped_arena.xml'
+DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_eraser.xml'
 
 
 class BaseDClawFlipFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):

@@ -58,7 +58,7 @@ DEFAULT_HARDWARE_OBSERVATION_KEYS = (
 )
 
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_beads.xml'
-DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_beads_4.xml'
+# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_beads_4.xml'
 
 
 class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
@@ -72,7 +72,7 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             frame_skip: int = 40,
             free_claw: bool = False,
             position_reward_weight: int = 1,
-            num_beads: int = 4,
+            num_objects: int = 9,
             **kwargs
     ):
         """Initializes the environment.
@@ -88,16 +88,16 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         self._camera_config = camera_config
         self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
 
-        self._num_beads = num_beads
-        if self._num_beads == 2:
+        self._num_objects = num_objects
+        if self._num_objects == 2:
             self._objects_offsets = np.array(
                 [-0.0175, 0.0175]
             )
             self._initial_objects_qpos = [0, 0]
             self._initial_objects_qvel = [0, 0] #(0, 0, 0, 0, 0, 0)
-            asset_path = 'dsuite/dclaw/assets/dclaw3xh_beads.xml'
+            asset_path = 'dsuite/dclaw/assets/dclaw3xh_beads_2.xml'
             self._objects_target_positions = [0, 0]
-        elif self._num_beads == 4:
+        elif self._num_objects == 4:
             self._objects_offsets = np.array(
                 [-0.0525, -0.0175, 0.0175, 0.0525]
             )
@@ -105,18 +105,26 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             self._initial_objects_qvel = [0, 0, 0, 0]
             asset_path = 'dsuite/dclaw/assets/dclaw3xh_beads_4.xml'
             self._objects_target_positions = [0, 0, 0, 0]
+        elif self._num_objects == 9:
+            self._objects_offsets = np.array(
+                [-0.035, 0, 0.035]*3
+            )
+            self._initial_objects_qpos = [0, 0, 0]*3
+            self._initial_objects_qvel = [0, 0, 0]*3
+            asset_path = 'dsuite/dclaw/assets/dclaw3xh_beads_9.xml'
+            self._objects_target_positions = [0, 0, 0]*3
         self._desired_claw_pos = DEFAULT_CLAW_RESET_POSE.copy()
         self._last_action = np.zeros(9)
 
         super().__init__(
             sim_model=get_asset_path(asset_path),
-            robot_config=get_dclaw_beads_config(num_beads),
+            robot_config=get_dclaw_beads_config(num_objects),
             observation_keys=observation_keys,
             frame_skip=frame_skip,
             **kwargs)
 
         self._target_bids, i = [], 0
-        while f'target_{i}' in self.model.body_names:
+        for i in range(self._num_objects):
             self._target_bids.append(self.model.body_name2id(f'target_{i}'))
             i += 1
 
@@ -130,7 +138,7 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         }
 
         i = 0
-        while f'object_{i}' in self.model.body_names:
+        for i in range(self._num_objects):
             initial_state.update({
                 f'object_{i}': RobotState(
                     qpos=self._initial_objects_qpos[i],
@@ -163,7 +171,7 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         objects_states, i = [], 0
 
-        while f'object_{i}' in self.model.body_names:
+        for i in range(self._num_objects):
             objects_states.append(self.robot.get_state(f'object_{i}'))
             i += 1
 
@@ -288,9 +296,13 @@ class DClawSlideBeadsFixed(BaseDClawSlideFreeObject):
                  #     (-0.04, 0.04),
                  #     (0.0825, 0.0825),
                  # ],
-                 init_qpos_range=[(0, 0, 0, 0)],
+                 # init_qpos_range=[(0, 0, 0, 0)],
+                 # target_qpos_range=[
+                 #     (-0.0475, -0.0475, 0.0475, 0.0475)
+                 # ],
+                 init_qpos_range=[[0, 0, 0]*3],
                  target_qpos_range=[
-                     (-0.0475, -0.0475, 0.0475, 0.0475)
+                     [-0.0875, 0, 0.0875]*3
                  ],
                  reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
                  cycle_goals=False,

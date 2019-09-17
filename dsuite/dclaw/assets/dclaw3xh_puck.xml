@@ -1,0 +1,38 @@
+<mujoco model='dclaw3xh_puck'>
+    <include file='../../../dsuite-scenes/scenes/basic_scene.xml' />
+    <include file='../../../dsuite-scenes/dclaw/assets/dependencies3xh.xml' />
+    <include file='../../../dsuite-scenes/dclaw_stations/assets/dependencies.xml' />
+    <compiler meshdir='../../../dsuite-scenes/dclaw' texturedir="../../../dsuite-scenes/dclaw"/>
+
+    <asset>
+      <texture file='../scenes/textures/light-wood.png' type="2d" name="tex-light-wood"/>
+      <material name="light-wood" reflectance="0.5" texrepeat="15 15" texture="tex-light-wood" texuniform="true"/>
+      <material name="screw-material" shininess='0.6' specular='0.35'/>
+    </asset>
+    <worldbody>
+
+      <camera name='object_target' pos='0.25 0 0.3' euler='0 0.7 1.57' />
+		  <body name='mount' pos='0.01 0 .255' euler='0 0 0'>
+        <geom name='mount' type="cylinder" size='0.03 0.005' rgba='.7 .7 .7 1'/>
+	      <include file='../../../dsuite-scenes/dclaw/assets/chain3xh.xml'/>
+	      <include file='../../../dsuite-scenes/dclaw/assets/chain3xh_overlay.xml'/>
+	    </body>
+
+      <body name="puck" pos="0 0 0.0101">
+        <include file='../../../dsuite-scenes/dclaw_stations/assets/puck.xml'/>
+      </body>
+
+      <body name="visual" pos="0 0 0.0101">
+        <include file='../../../dsuite-scenes/dclaw_stations/assets/puck_visual.xml'/>
+      </body>
+
+      <body name="arena" pos="0 0 0">
+        <geom type="box" size="0.155 0.005 0.04" pos="0 0.15 0" material="light-wood"/>
+        <geom type="box" size="0.005 0.155 0.04" pos="0.15 0 0" material="light-wood"/>
+        <geom type="box" size="0.005 0.155 0.04" pos="-0.15 0 0" material="light-wood"/>
+        <geom type="box" size="0.155 0.005 0.04" pos="0 -0.15 0" material="light-wood"/>
+      </body>
+
+    </worldbody>
+
+</mujoco>
