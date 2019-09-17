@@ -988,3 +988,13 @@ class DClawTranslatePuckResetFree(DClawTurnFreeValve3ResetFree):
             observation_keys=DEFAULT_PUCK_OBSERVATION_KEYS,
             **kwargs
         )
+
+
+@configurable(pickleable=True)
+class DClawTranslatePuckResetFreeSwapGoalEval(DClawTurnFreeValve3ResetFreeSwapGoalEval):
+    def __init__(self, **kwargs):
+        super().__init__(
+            asset_path='dsuite/dclaw/assets/dclaw3xh_puck.xml',
+            observation_keys=DEFAULT_PUCK_OBSERVATION_KEYS,
+            **kwargs
+        )

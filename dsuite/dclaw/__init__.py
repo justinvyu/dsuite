@@ -133,6 +133,23 @@ register(
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3MultiGoalResetFree')
 
 #===============================================================================
+# Turn Free Object tasks
+#===============================================================================
+
+register(
+    env_id='DClawTranslatePuckFixed-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTranslatePuckFixed')
+
+register(
+    env_id='DClawTranslatePuckResetFree-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTranslatePuckResetFree')
+
+register(
+    env_id='DClawTranslatePuckResetFreeSwapGoalEval-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTranslatePuckResetFreeSwapGoalEval')
+
+
+#===============================================================================
 # Lift Object tasks
 #===============================================================================
 
