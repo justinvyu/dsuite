@@ -508,7 +508,11 @@ class DClawTurnMultiGoal(DClawTurnFixed):
                  goal_collection: bool = False,
                  random_goal_sampling: bool = False,
                  one_hot_goal_index: bool = False,
+                 random_reset: bool = False,
                  **kwargs):
+
+        if one_hot_goal_index:
+            observation_keys += ('one_hot_goal_index', )
         super().__init__(*args, observation_keys=observation_keys, **kwargs)
 
         self._goals = goals
@@ -541,43 +545,23 @@ class DClawTurnMultiGoal(DClawTurnFixed):
         self._goal_collection = goal_collection
         self._random_goal_sampling = random_goal_sampling
         self._one_hot_goal_index = one_hot_goal_index
+        self._random_reset = random_reset
         self._reset()
 
         self._num_goal_switches = 0
 
     def get_obs_dict(self):
         obs_dict = super().get_obs_dict()
-
-         # Log some other metrics with multigoal
         obs_dict['num_goal_switches'] = np.array([self._num_goal_switches])
         if self._one_hot_goal_index:
-            goal_index_obs = np.zeros(self._num_goals).astype(np.float32)
-            goal_index_obs[self._goal_index] = 1 
-        else:
-            goal_index_obs = np.array([self._goal_index])
-
+            one_hot = np.zeros(self._num_goals).astype(np.float32)
+            one_hot[self._goal_index] = 1
+            obs_dict['one_hot_goal_index'] = one_hot
+        goal_index_obs = np.array([self._goal_index])
         obs_dict['goal_index'] = goal_index_obs
-
         return obs_dict
 
-    def _reset(self):
-        if self._goal_collection:
-            self._set_target_object_pos(self._goals[self._goal_index]) 
-            print(self._goals[self._goal_index], self._target_object_pos)
-            print(self._init_object_pos_range, self._target_object_pos)
-            super()._reset()
-        elif self._reset_free and self._initial_reset:
-            self._set_target_object_pos(self._goals[self._goal_index])
-        else:
-            self._initial_reset = True
-            # If multigoal with resets, change the init
-            target = self._goals[self._goal_index]
-            init = self._goals[1 - self._goal_index]
-            self._init_object_pos_range = (init, init)
-            self._target_pos_range = (target, target)
-            super()._reset()
-
-    def render(self, mode='human', **kwargs):
+    def render(self, mode='rgb_array', **kwargs):
         if mode == 'human':
             return super().render(mode=mode, **kwargs)
         elif mode == 'rgb_array':
@@ -590,6 +574,30 @@ class DClawTurnMultiGoal(DClawTurnFixed):
             return img_obs
         else:
             raise NotImplementedError
+
+    def _reset(self):
+        if self._goal_collection:
+            self._set_target_object_pos(self._goals[self._goal_index])
+            super()._reset()
+        elif self._reset_free and self._initial_reset:
+            self._set_target_object_pos(self._goals[self._goal_index])
+        else:
+            self._initial_reset = True
+            # If multigoal with resets, change the init
+            target = self._goals[self._goal_index]
+            if self._random_reset:
+                # Sample uniformly for resets
+                init = np.random.uniform(-np.pi, np.pi)
+            else:
+                # Sample randomly from the other goals for reset pos
+                other_goal_inds = [
+                    i for i in range(self._num_goals)
+                    if i != self._goal_index
+                ]
+                init = np.random.choice(other_goal_inds)
+            self._init_object_pos_range = (init, init)
+            self._target_pos_range = (target, target)
+            super()._reset()
 
     def reset(self):
         obs_dict = self.get_obs_dict()
@@ -624,10 +632,15 @@ class DClawTurnMultiGoal(DClawTurnFixed):
             self._goal_image = self.sample_goal_image()
 
     def switch_goal(self, random=False):
-        # For now, just increment by one and mod by # of goals.
         if random:
-            self._goal_index = np.random.randint(low=0, high=self._num_goals)
+            # Pick randomly out of the other goals
+            other_goal_inds = [
+                i for i in range(self._num_goals)
+                if i != self._goal_index
+            ]
+            self._goal_index = np.random.choice(other_goal_inds)
         else:
+            # Cycle to the next goal
             self._goal_index = np.mod(self._goal_index + 1, self._num_goals)
         self._num_goal_switches += 1
         self.set_goal()
