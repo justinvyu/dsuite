@@ -115,7 +115,7 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
         # Get handles to commonly referenced elements.
         self._mount_bid = self.model.body_name2id('mount')
         self._mount_gid = self.model.geom_name2id('mount')
-        self._object_bid = self.model.body_name2id('object')
+        # self._object_bid = self.model.body_name2id('object')
 
     def _reset_dclaw_and_object(
             self,

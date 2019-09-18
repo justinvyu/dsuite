@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. -->
 
-<mujoco model='dclaw3xh_eraser'>
+<mujoco model='dclaw3xh_beads'>
     <include file='../../../dsuite-scenes/scenes/basic_scene.xml' />
     <include file='../../../dsuite-scenes/dclaw/assets/dependencies3xh.xml' />
     <include file='../../../dsuite-scenes/dclaw_stations/assets/dependencies.xml' />
@@ -27,30 +27,21 @@ limitations under the License. -->
 
     <worldbody>
 		  <!-- <camera name='targeting' pos='1 1 2' mode='targetbodycom' target='dClaw'/> -->
-		  <camera name='object_target' pos='0 0 0.33' mode='targetbody' target='object'/>
+		  <!-- <camera name='object_target' pos='0 0 0.33'/> -->
 
-		  <body name='mount' pos='0.015 0 0.245' euler='0 0 0'>
+		  <body name='mount' pos='0 0.02 0.25' euler='0 0 3.74'>
         <geom name='mount' type="cylinder" size='0.03 0.005' rgba='.7 .7 .7 1'/>
 	      <include file='../../../dsuite-scenes/dclaw/assets/chain3xh.xml'/>
 	      <include file='../../../dsuite-scenes/dclaw/assets/chain3xh_overlay.xml'/>
 	    </body>
 
       <!-- <body name="arena" pos="0 0 0"> -->
-      <!--   <geom type="box" size="0.155 0.005 0.1" pos="0 0.15 0" material="light-wood"/> -->
-      <!--   <geom type="box" size="0.005 0.155 0.1" pos="0.15 0 0" material="light-wood"/> -->
-      <!--   <geom type="box" size="0.005 0.155 0.1" pos="-0.15 0 0" material="light-wood"/> -->
-      <!--   <geom type="box" size="0.155 0.005 0.1" pos="0 -0.15 0" material="light-wood"/> -->
-      <!--   <!-\- <geom type="box" size="0.155 0.005 0.1" pos="0 0.15 0" rgba='0 0 0 0' material="light-wood" solref='0.01 0.05' friction='0.1 0.005 0.0001'/> -\-> -->
-      <!--   <!-\- <geom type="box" size="0.005 0.155 0.1" pos="0.15 0 0" rgba='0 0 0 0' material="light-wood" solref='0.01 0.05' friction='0.1 0.005 0.0001'/> -\-> -->
-      <!--   <!-\- <geom type="box" size="0.005 0.155 0.1" pos="-0.15 0 0" rgba='0 0 0 0' material="light-wood" solref='0.01 0.05' friction='0.1 0.005 0.0001'/> -\-> -->
-      <!--   <!-\- <geom type="box" size="0.155 0.005 0.1" pos="0 -0.15 0" rgba='0 0 0 0' material="light-wood" solref='0.01 0.05' friction='0.1 0.005 0.0001'/> -\-> -->
-      <!--   <!-\- <geom type="box" size="0.155 0.155 0.5" pos="0 0 -0.495" material="light-wood" friction='1.0 0.005 0.0001'/> -\-> -->
+      <!--   <geom type="box" size="0.155 0.005 0.04" pos="0 0.15 0" material="light-wood"/> -->
+      <!--   <geom type="box" size="0.005 0.155 0.04" pos="0.15 0 0" material="light-wood"/> -->
+      <!--   <geom type="box" size="0.005 0.155 0.04" pos="-0.15 0 0" material="light-wood"/> -->
+      <!--   <geom type="box" size="0.155 0.005 0.04" pos="0 -0.15 0" material="light-wood"/> -->
+      <!--   <!-\- <geom type="box" size="0.155 0.155 0.01" pos="0 0 0" material="light-wood" friction='0.1 0.005 0.0001'/> -\-> -->
       <!-- </body> -->
-      <body name="arena" pos="0 0 0">
-        <include file='../../../dsuite-scenes/dclaw_stations/assets/circle_arena.xml'/>
-      </body>
-
     </worldbody>
-    <include file='../../../dsuite-scenes/dclaw_stations/assets/eraser.xml' />
-
+    <include file='../../../dsuite-scenes/dclaw_stations/assets/beads_4.xml' />
 </mujoco>

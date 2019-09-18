@@ -26,15 +26,20 @@ from typing import Dict, Optional, Sequence
 import numpy as np
 from transforms3d.euler import euler2quat
 
-from dsuite.dclaw.base_env import (BaseDClawObjectEnv,
-                                   BaseDClawEnv,
-                                   DEFAULT_CLAW_RESET_POSE,
-                                   DClawHardwareEnv)
+from dsuite.dclaw.base_env import (
+    BaseDClawObjectEnv,
+    BaseDClawEnv,
+    DEFAULT_CLAW_RESET_POSE)
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance, quat_distance
 from dsuite.components.robot.config import ControlMode
 from dsuite.components.robot import RobotState
+from dsuite.dclaw.turn_free_object import (
+    INTERMEDIATE_CLAW_RESET_POSE_0,
+    INTERMEDIATE_CLAW_RESET_POSE_1,
+    INTERMEDIATE_CLAW_RESET_POSE_2
+)
 
 INTERMEDIATE_CLAW_RESET_POSE_0 = np.array([np.pi / 3, -np.pi / 3, np.pi / 2] * 3)
 INTERMEDIATE_CLAW_RESET_POSE_1 = np.array([np.pi / 3, np.pi / 5, np.pi / 2] * 3)
@@ -59,21 +64,23 @@ DEFAULT_OBSERVATION_KEYS = (
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_x2_catch.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_octahedron.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml'
-DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml'
+# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml'
+DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron_bowl.xml'
 
 
 class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     """Shared logic for DClaw turn tasks."""
-
-    def __init__(self,
-                 asset_path: str = DCLAW3_ASSET_PATH,
-                 observation_keys: Sequence[str] = DEFAULT_OBSERVATION_KEYS,
-                 device_path: Optional[str] = None,
-                 camera_config: dict = None,
-                 frame_skip: int = 40,
-                 free_claw: bool = False,
-                 position_reward_weight: int = 1,
-                 **kwargs):
+    def __init__(
+            self,
+            asset_path: str = DCLAW3_ASSET_PATH,
+            observation_keys: Sequence[str] = DEFAULT_OBSERVATION_KEYS,
+            device_path: Optional[str] = None,
+            camera_config: dict = None,
+            frame_skip: int = 40,
+            free_claw: bool = False,
+            position_reward_weight: int = 1,
+            **kwargs
+    ):
         """Initializes the environment.
 
         Args:
@@ -85,7 +92,9 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         """
         self._position_reward_weight = position_reward_weight
         self._camera_config = camera_config
-        self._object_offset = np.array([0, 0, 0.041, 1.017, 0, 0]) # get from dodecahedron.xml, object['pos', 'euler']
+        self._object_offset = np.array(
+            [0, 0, 0.041, 1.017, 0, 0]
+        )  # get from dodecahedron.xml, object['pos', 'euler']
 
         super().__init__(
             sim_model=get_asset_path(asset_path),
@@ -118,6 +127,8 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
     def _step(self, action: np.ndarray):
         """Applies an action to the robot."""
+        # action  = self.robot.normalize_action(
+        #             {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
         self.robot.step({
             'dclaw': action,
             # 'guide': np.atleast_1d(self._object_target_qpos),
@@ -318,20 +329,25 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
     """Turns the dodecahedron with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 init_qpos_range=(
-                     (0, 0, 0.041, 1.017, 0, 0),
-                     (0, 0, 0.041, 1.017, 0, 0)
-                 ), # [(0, 0, 0.041, 1.017, 0, 0)], # default global init pos, green faces up
+                 # init_qpos_range=(
+                 #     (-0.08, -0.08, 0.041, 1.017, 0, 0),
+                 #     (-0.08, -0.08, 0.041, 1.017, 0, 0)
+                 # ),
+                 init_qpos_range=[(0, 0, 0.041, 1.017, 0, 0)], # default global init pos, green faces up
                  target_qpos_range=[  # target pos relative to init
                      (0, 0, 0.05, 0, 0, np.pi),
                      (0, 0, 0.05, np.pi, 0, 0), # bgreen side up
                      (0, 0, 0.05, 1.017, 0, 2*np.pi/5), # black side up
                  ],
                  asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml',
-                 reset_policy_checkpoint_path='/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
+                 reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
+                 use_bowl_arena=True,
                  *args, **kwargs):
         self._init_qpos_range = init_qpos_range
         self._target_qpos_range = target_qpos_range
+        self._use_bowl_arena = use_bowl_arena
+        if self._use_bowl_arena:
+            asset_path = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron_bowl.xml'
         super().__init__(asset_path=asset_path, *args, **kwargs)
         self._reset_horizon = 0
         self._policy = None
@@ -364,6 +380,19 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
         self._reset_horizon = variant['sampler_params']['kwargs']['max_path_length']
 
         self._reset_target_qpos_range = variant['environment_params']['training']['kwargs']['target_qpos_range']
+
+    @property
+    def num_goals(self):
+        if isinstance(self._target_qpos_range, (list,)):
+            return len(self._target_qpos_range)
+        else:
+            raise Exception("infinite goals")
+
+    def set_goal(self, goal_index):
+        """Allow outside algorithms to alter goals."""
+        self._goal_index = goal_index
+        self._cycle_goals = True
+        self._let_alg_set_goals = True
 
     def _sample_goal(self, obs_dict):
         if isinstance(self._target_qpos_range, (list,)):
@@ -407,17 +436,18 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
         self.sim.forward()
         self._reset()
 
-        target_qpos_range = self._target_qpos_range
-        self._target_qpos_range = self._reset_target_qpos_range
-        self._set_target_object_qpos(
-            self._sample_goal(self.get_obs_dict()))
+        if self._policy:
+            target_qpos_range = self._target_qpos_range
+            self._target_qpos_range = self._reset_target_qpos_range
+            self._set_target_object_qpos(
+                self._sample_goal(self.get_obs_dict()))
 
-        for _ in range(self._reset_horizon):
-            policy_input = self.get_policy_input()
-            action = self._policy.actions_np(policy_input)[0]
-            self.step(action)
+            for _ in range(self._reset_horizon):
+                policy_input = self.get_policy_input()
+                action = self._policy.actions_np(policy_input)[0]
+                self.step(action)
 
-        self._target_qpos_range = target_qpos_range
+            self._target_qpos_range = target_qpos_range
         self._set_target_object_qpos(
             self._sample_goal(self.get_obs_dict()))
 
@@ -488,11 +518,31 @@ class DClawLiftDDResetFree(DClawLiftDDFixed):
         dclaw_config = self.robot.get_config('dclaw')
         dclaw_control_mode = dclaw_config.control_mode
         dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
+
         if self._reset_fingers:
-            reset_action = self.robot.normalize_action(
-                {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
-            for _ in range(15):
-                self._step(reset_action)
+            if self._use_bowl_arena:
+                reset_action = self.robot.normalize_action(
+                    {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_0})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+                    reset_action = self.robot.normalize_action(
+                        {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_1})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+                    reset_action = self.robot.normalize_action(
+                        {'dclaw': INTERMEDIATE_CLAW_RESET_POSE_2})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+                    reset_action = self.robot.normalize_action(
+                        {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+            else:
+                reset_action = self.robot.normalize_action(
+                    {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
+                for _ in range(10):
+                    self._step(reset_action)
+
         self._set_target_object_qpos(self._sample_goal(obs_dict))
         dclaw_config.set_control_mode(dclaw_control_mode)
 
@@ -551,7 +601,7 @@ class DClawLiftDDResetFreeComposedGoals(DClawLiftDDResetFree):
         elif self._goal_index == 1:
             reward_dict['object_to_target_xy_position_distance_reward'] *= 0
             reward_dict['object_to_target_orientation_distance_reward'] *= 0
-        else:
+        elif self._goal_index == 2:
             reward_dict['object_to_target_z_position_distance_reward'] *= 0
             reward_dict['object_to_target_xy_position_distance_reward'] *= 0
         return reward_dict
