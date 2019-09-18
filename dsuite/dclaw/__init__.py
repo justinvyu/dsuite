@@ -221,6 +221,10 @@ register(
 #===============================================================================
 
 register(
+    env_id='DClawSlideBeadsHardware-v0',
+    class_path='dsuite.dclaw.slide:DClawSlideBeadsHardware')
+
+register(
     env_id='DClawSlideBeadsFixed-v0',
     class_path='dsuite.dclaw.slide:DClawSlideBeadsFixed')
 

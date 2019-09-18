@@ -40,7 +40,7 @@ from dsuite.dclaw.turn_free_object import (
     INTERMEDIATE_CLAW_RESET_POSE_1,
     INTERMEDIATE_CLAW_RESET_POSE_2
 )
-
+from base_env import BaseDClawHardwareEnv
 from dsuite.dclaw.config import get_dclaw_beads_config
 
 
@@ -71,7 +71,6 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             device_path: Optional[str] = None,
             camera_config: dict = None,
             frame_skip: int = 40,
-            free_claw: bool = False,
             position_reward_weight: int = 1,
             num_objects: int = 9,
             **kwargs
@@ -282,6 +281,12 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             return self._image_service.get_image(*args, **kwargs)
 
         return super().render(*args, **kwargs)
+
+
+
+@configurable(pickleable=True)
+class BaseDClawSlideBeadsHardware(BaseDClawHardwareEnv):
+    pass
 
 
 @configurable(pickleable=True)
