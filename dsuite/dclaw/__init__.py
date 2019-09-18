@@ -133,12 +133,33 @@ register(
     class_path='dsuite.dclaw.turn_free_object:DClawTurnFreeValve3MultiGoalResetFree')
 
 #===============================================================================
+# Turn Free Object tasks
+#===============================================================================
+
+register(
+    env_id='DClawTranslatePuckFixed-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTranslatePuckFixed')
+
+register(
+    env_id='DClawTranslatePuckResetFree-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTranslatePuckResetFree')
+
+register(
+    env_id='DClawTranslatePuckResetFreeSwapGoalEval-v0',
+    class_path='dsuite.dclaw.turn_free_object:DClawTranslatePuckResetFreeSwapGoalEval')
+
+
+#===============================================================================
 # Lift Object tasks
 #===============================================================================
 
 register(
     env_id='DClawLiftDDFixed-v0',
     class_path='dsuite.dclaw.lift:DClawLiftDDFixed')
+
+register(
+    env_id='DClawLiftDDHardware-v0',
+    class_path='dsuite.dclaw.lift:DClawLiftDDHardware')
 
 register(
     env_id='DClawLiftDDResetFree-v0',
@@ -194,3 +215,23 @@ register(
     env_id='DClawScrewRandomDynamics-v0',
     class_path='dsuite.dclaw.screw:DClawScrewRandomDynamics',
     max_episode_steps=_SCREW_EPISODE_LEN)
+
+#===============================================================================
+# Slide Object tasks
+#===============================================================================
+
+register(
+    env_id='DClawSlideBeadsHardware-v0',
+    class_path='dsuite.dclaw.slide:DClawSlideBeadsHardware')
+
+register(
+    env_id='DClawSlideBeadsFixed-v0',
+    class_path='dsuite.dclaw.slide:DClawSlideBeadsFixed')
+
+register(
+    env_id='DClawSlideBeadsResetFree-v0',
+    class_path='dsuite.dclaw.slide:DClawSlideBeadsResetFree')
+
+register(
+    env_id='DClawSlideBeadsResetFreeEval-v0',
+    class_path='dsuite.dclaw.slide:DClawSlideBeadsResetFreeEval')
