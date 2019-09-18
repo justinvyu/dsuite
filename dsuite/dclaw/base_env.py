@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional, Sequence
 
 import gym
 import numpy as np
+import collections
 
 from dsuite.components.robot import DynamixelRobotComponent, RobotState
 from dsuite.dclaw.config import (
@@ -30,8 +31,14 @@ from dsuite.dclaw.config import (
     DCLAW_OBJECT_GUIDE_HARDWARE_CONFIG,
     DEFAULT_DCLAW_CALIBRATION_MAP)
 from dsuite.robot_env import make_box_space, RobotEnv
+from dsuite.utils.resources import get_asset_path
 DEFAULT_CLAW_RESET_POSE = np.array([0, -np.pi / 3, np.pi / 3] * 3)
 # DEFAULT_CLAW_RESET_POSE = np.array([0, -np.pi / 5, np.pi / 3] * 3)
+
+DEFAULT_HARDWARE_OBSERVATION_KEYS = (
+    'claw_qpos',
+    'last_action',
+)
 
 class BaseDClawEnv(RobotEnv, metaclass=abc.ABCMeta):
     """Base environment for all DClaw robot tasks."""
@@ -168,3 +175,91 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
             # Start the episode with the object disengaged.
             self.robot.set_motors_engaged('object', False)
             self.robot.reset_time()
+
+class DClawHardwareEnv(BaseDClawEnv):
+    def __init__(self,
+                 camera_config: dict = None,
+                 device_path: str = None,
+                 observation_keys: Sequence[str] = DEFAULT_HARDWARE_OBSERVATION_KEYS,
+                 frame_skip: int = 40,
+                 num_goals: int = 1,
+                 goals: np.ndarray = [(0, 0, 0, 0, 0, np.pi)],
+                 **kwargs):
+        if num_goals > 1:
+            observation_keys = observation_keys + ('goal_index', )
+
+        super().__init__(
+           sim_model=get_asset_path('dsuite-scenes/dclaw/dclaw3xh.xml'),
+           robot_config=self.get_config_for_device(device_path),
+           frame_skip=frame_skip,
+           observation_keys=observation_keys,
+           **kwargs)
+        self._camera_config = camera_config
+        if camera_config:
+            from dsuite.dclaw.turn import get_image_service
+            self._image_service = get_image_service(**camera_config)
+        self._last_action = np.zeros(self.action_space.shape[0])
+        self._num_goals = num_goals
+        self._goal_index = 0
+        # Goals need to be specified with 9-dim vector (same shape as qpos)
+        self._goals = goals
+        assert num_goals == len(goals), f'{num_goals} != {len(goals)}'
+
+    def get_obs_dict(self) -> Dict[str, np.ndarray]:
+        state = self.robot.get_state('dclaw')
+        return collections.OrderedDict((
+            ('claw_qpos', state.qpos),
+            ('claw_qvel', state.qvel),
+            ('last_action', self._last_action),
+            ('goal_index', np.array([self._goal_index])),
+        ))
+
+    def get_reward_dict(
+            self,
+            action: np.ndarray,
+            obs_dict: Dict[str, np.ndarray]
+    ) -> Dict[str, np.ndarray]:
+        qvel = obs_dict['claw_qvel']
+        reward_dict = collections.OrderedDict({
+            'joint_vel_cost': -0.1 * np.linalg.norm(qvel[np.abs(qvel) >= 4.5])
+        })
+        return reward_dict
+
+    def get_score_dict(
+            self,
+            obs_dict: Dict[str, np.ndarray],
+            reawrd_dict: Dict[str, np.ndarray]
+    ) -> Dict[str, np.ndarray]:
+        return collections.OrderedDict()
+
+    def _step(self, action: np.ndarray):
+        self.robot.step({'dclaw': action})
+        self._last_action = action
+
+    def _reset_routine(self):
+        self.robot.set_state({
+            'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE,
+                                qvel=np.zeros(self.action_space.shape[0]))
+        })
+
+    def _reset(self):
+        self._reset_routine() 
+        self._last_action = np.zeros(self.action_space.shape[0])
+        # Set the new goal every episode
+        self._goal_index = self._sample_goal()
+
+    def _sample_goal(self):
+        if self._num_goals >= 2:
+            other_indices = [index for index in range(self._num_goals)
+                if index != self._goal_index]
+            sampled_goal = np.random.choice(other_indices)
+        else:
+            sampled_goal = self._goal_index
+        return sampled_goal
+
+    def render(self, *args, **kwargs):
+        if self._camera_config is not None:
+            return self._image_service.get_image(*args, **kwargs)
+
+        return super().render(*args, **kwargs)
+

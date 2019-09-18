@@ -1,4 +1,4 @@
-# Copyright 2019 The DSuite Authors.
+# Copyright 2026 The DSuite Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,13 +28,17 @@ from transforms3d.euler import euler2quat
 
 from dsuite.dclaw.base_env import (BaseDClawObjectEnv,
                                    BaseDClawEnv,
-                                   DEFAULT_CLAW_RESET_POSE)
+                                   DEFAULT_CLAW_RESET_POSE,
+                                   DClawHardwareEnv)
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance, quat_distance
 from dsuite.components.robot.config import ControlMode
 from dsuite.components.robot import RobotState
 
+INTERMEDIATE_CLAW_RESET_POSE_0 = np.array([np.pi / 3, -np.pi / 3, np.pi / 2] * 3)
+INTERMEDIATE_CLAW_RESET_POSE_1 = np.array([np.pi / 3, np.pi / 5, np.pi / 2] * 3)
+INTERMEDIATE_CLAW_RESET_POSE_2 = np.array([np.pi / 4, -np.pi/ 6, np.pi / 3] * 3)
 
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (
@@ -46,12 +50,6 @@ DEFAULT_OBSERVATION_KEYS = (
     'target_quaternion',
 #    'in_corner',
 )
-
-DEFAULT_HARDWARE_OBSERVATION_KEYS = (
-    'claw_qpos',
-    'last_action',
-)
-
 
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_free_valve3_in_arena.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_less_tiny_box.xml'
@@ -283,6 +281,37 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         return super().render(*args, **kwargs)
 
+GOAL_COLLECTION_RESET_POSE = np.array([0, -np.pi / 5, np.pi / 2] * 3)
+import time
+@configurable(pickleable=True)
+class DClawLiftDDHardware(DClawHardwareEnv):
+    def _reset_routine(self):
+#        self.robot.set_state({
+#            'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE,
+#                                qvel=np.zeros(self.action_space.shape[0]))
+#        })
+#        time.sleep(1)
+#        self.robot.set_state({
+#            'dclaw': RobotState(qpos=GOAL_COLLECTION_RESET_POSE,
+#                                qvel=np.zeros(self.action_space.shape[0]))
+#        })
+
+        self.robot.set_state({
+            'dclaw': RobotState(qpos=INTERMEDIATE_CLAW_RESET_POSE_0,
+                                qvel=np.zeros(self.action_space.shape[0]))
+        })
+        self.robot.set_state({
+            'dclaw': RobotState(qpos=INTERMEDIATE_CLAW_RESET_POSE_1,
+                                qvel=np.zeros(self.action_space.shape[0]))
+        })
+        self.robot.set_state({
+            'dclaw': RobotState(qpos=INTERMEDIATE_CLAW_RESET_POSE_2,
+                                qvel=np.zeros(self.action_space.shape[0]))
+        })
+        self.robot.set_state({
+            'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE,
+                                qvel=np.zeros(self.action_space.shape[0]))
+        })
 
 @configurable(pickleable=True)
 class DClawLiftDDFixed(BaseDClawLiftFreeObject):

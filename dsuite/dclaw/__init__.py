@@ -141,6 +141,10 @@ register(
     class_path='dsuite.dclaw.lift:DClawLiftDDFixed')
 
 register(
+    env_id='DClawLiftDDHardware-v0',
+    class_path='dsuite.dclaw.lift:DClawLiftDDHardware')
+
+register(
     env_id='DClawLiftDDResetFree-v0',
     class_path='dsuite.dclaw.lift:DClawLiftDDResetFree')
 
