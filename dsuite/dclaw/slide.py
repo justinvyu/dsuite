@@ -284,7 +284,7 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
 
 @configurable(pickleable=True)
-class BaseDClawSlideBeadsHardware(DClawHardwareEnv):
+class DClawSlideBeadsHardware(DClawHardwareEnv):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
