@@ -176,6 +176,7 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
             self.robot.set_motors_engaged('object', False)
             self.robot.reset_time()
 
+
 class DClawHardwareEnv(BaseDClawEnv):
     def __init__(self,
                  camera_config: dict = None,
@@ -262,4 +263,3 @@ class DClawHardwareEnv(BaseDClawEnv):
             return self._image_service.get_image(*args, **kwargs)
 
         return super().render(*args, **kwargs)
-

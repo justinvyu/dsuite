@@ -40,7 +40,7 @@ from dsuite.dclaw.turn_free_object import (
     INTERMEDIATE_CLAW_RESET_POSE_1,
     INTERMEDIATE_CLAW_RESET_POSE_2
 )
-from base_env import BaseDClawHardwareEnv
+from dsuite.dclaw.base_env import DClawHardwareEnv
 from dsuite.dclaw.config import get_dclaw_beads_config
 
 
@@ -283,10 +283,10 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         return super().render(*args, **kwargs)
 
 
-
 @configurable(pickleable=True)
-class BaseDClawSlideBeadsHardware(BaseDClawHardwareEnv):
-    pass
+class BaseDClawSlideBeadsHardware(DClawHardwareEnv):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 @configurable(pickleable=True)
