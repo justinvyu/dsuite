@@ -72,7 +72,7 @@ class BaseDClawSlideFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             camera_config: dict = None,
             frame_skip: int = 40,
             position_reward_weight: int = 1,
-            num_objects: int = 9,
+            num_objects: int = 4,
             **kwargs
     ):
         """Initializes the environment.
@@ -302,14 +302,17 @@ class DClawSlideBeadsFixed(BaseDClawSlideFreeObject):
                  #     (-0.04, 0.04),
                  #     (0.0825, 0.0825),
                  # ],
-                 # init_qpos_range=[(0, 0, 0, 0)],
-                 # target_qpos_range=[
-                 #     (-0.0475, -0.0475, 0.0475, 0.0475)
-                 # ],
-                 init_qpos_range=[[0, 0, 0]*3],
+                 init_qpos_range=(
+                     (-0.0475, -0.0475, -0.0475, -0.0475),
+                     (0.0475, 0.0475, 0.0475, 0.0475)
+                 ),
                  target_qpos_range=[
-                     [-0.0875, 0, 0.0875]*3
+                     (-0.0475, -0.0475, 0.0475, 0.0475)
                  ],
+                 # init_qpos_range=[[0, 0, 0]*3],
+                 # target_qpos_range=[
+                 #     [-0.0875, 0, 0.0875]*3
+                 # ],
                  reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
                  cycle_goals=False,
                  *args, **kwargs):
@@ -398,9 +401,10 @@ class DClawSlideBeadsFixed(BaseDClawSlideFreeObject):
             rand_index = np.random.randint(len(self._init_qpos_range))
             self._initial_objects_qpos = np.array(self._init_qpos_range[rand_index])
         elif isinstance(self._init_qpos_range, (tuple,)):
-            self._initial_object_qpos = np.random.uniform(
+            initial_qpos = np.random.uniform(
                 low=self._init_qpos_range[0], high=self._init_qpos_range[1]
             )
+            self._initial_objects_qpos = np.sort(initial_qpos)
 
         self._set_target_objects_qpos(
             self._sample_goals(self.get_obs_dict()))
