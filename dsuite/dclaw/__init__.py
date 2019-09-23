@@ -45,20 +45,24 @@ register(
     class_path='dsuite.dclaw.turn:DClawTurnFixed')
 
 register(
-    env_id='DClawTurnRandom-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnRandom')
+    env_id='DClawTurnResetFree-v0',
+    class_path='dsuite.dclaw.turn:DClawTurnResetFree')
 
-register(
-    env_id='DClawTurnRandomDynamics-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnRandomDynamics')
+# register(
+#     env_id='DClawTurnRandom-v0',
+#     class_path='dsuite.dclaw.turn:DClawTurnRandom')
 
-register(
-    env_id='DClawTurnImage-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnImage')
+# register(
+#     env_id='DClawTurnRandomDynamics-v0',
+#     class_path='dsuite.dclaw.turn:DClawTurnRandomDynamics')
 
-register(
-    env_id='DClawTurnImageResetFree-v0',
-    class_path='dsuite.dclaw.turn:DClawTurnImageResetFree')
+# register(
+#     env_id='DClawTurnImage-v0',
+#     class_path='dsuite.dclaw.turn:DClawTurnImage')
+
+# register(
+#     env_id='DClawTurnImageResetFree-v0',
+#     class_path='dsuite.dclaw.turn:DClawTurnImageResetFree')
 
 register(
     env_id='DClawTurnMultiGoal-v0',

@@ -28,7 +28,7 @@
   <worldbody>
     <camera name="targeting" pos="1 1 2" mode="targetbodycom" target="dClaw"/>
     <camera name="object_target" pos="0 0 0.33" mode="targetbody" target="object"/>
-    <body name="mount" pos="0 0 .335" euler="0 0 0">
+    <body name="mount" pos="0.009 0 .335" euler="0 0 0">
       <geom name="mount" type="cylinder" size="0.03 0.005" rgba=".7 .7 .7 1"/>
       <include file="../../../dsuite-scenes/dclaw/assets/chain3xh.xml"/>
       <include file="../../../dsuite-scenes/dclaw/assets/chain3xh_overlay.xml"/>

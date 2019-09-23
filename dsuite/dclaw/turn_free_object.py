@@ -44,17 +44,13 @@ INTERMEDIATE_CLAW_RESET_POSE_2 = np.array([np.pi / 4, -np.pi / 5, np.pi / 2] * 3
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (
     'claw_qpos',
-    'object_position',
     'object_xy_position',
-    'object_orientation_cos',
-    'object_orientation_sin',
-    'object_angle',
+    'object_z_orientation_cos',
+    'object_z_orientation_sin',
     'last_action',
-
     'target_xy_position',
     'target_z_orientation_cos',
     'target_z_orientation_sin',
-    'goal_index',
 )
 
 DEFAULT_HARDWARE_OBSERVATION_KEYS = (
@@ -179,6 +175,9 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             ('object_orientation', object_orientation),
             ('object_orientation_cos', np.cos(object_orientation)),
             ('object_orientation_sin', np.sin(object_orientation)),
+            ('object_z_orientation', object_orientation[2:]),
+            ('object_z_orientation_cos', np.cos(object_orientation[2:])),
+            ('object_z_orientation_sin', np.sin(object_orientation[2:])),
             ('object_angle', object_angle.reshape(-1)),
             ('object_qvel', object_state.qvel),
             ('last_action', self._last_action),
@@ -415,8 +414,8 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
     """Turns the object with a fixed initial and fixed target position."""
 
     def __init__(self,
-                 target_qpos_range=((-0.08, -0.08, 0, 0, 0, 0), (0.08, 0.08, 0, 0, 0, 0)),
-                 init_qpos_range=((-0.08, -0.08, 0, 0, 0, -np.pi), (0.08, 0.08, 0, 0, 0, np.pi)),
+                 target_qpos_range=((0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0)),
+                 init_qpos_range=((-0.05, -0.05, 0, 0, 0, -np.pi), (0.05, 0.05, 0, 0, 0, np.pi)),
                  reset_policy_checkpoint_path='', #'/
                  cycle_goals=False,
                  *args,

@@ -30,6 +30,8 @@ from dsuite.simulation.randomize import SimRandomizer
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
 from dsuite.utils.circle_math import circle_distance
+from dsuite.components.robot.config import ControlMode
+from dsuite.components.robot import RobotState
 import pickle
 
 IMAGE_SERVICE = None
@@ -64,8 +66,9 @@ DEFAULT_OBSERVATION_KEYS = (
     'object_angle_cos',
     'object_angle_sin',
     'last_action',
-    'object_to_target_angle_dist',
-    'target_angle',
+    # 'object_to_target_angle_distance',
+    'target_angle_cos',
+    'target_angle_sin',
 )
 
 # Reset pose for the claw joints.
@@ -133,7 +136,7 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         """Applies an action to the robot."""
         self.robot.step({
             'dclaw': action,
-            'guide': np.atleast_1d(self._target_object_pos),
+            # 'guide': np.atleast_1d(self._target_object_pos),
         })
         # Save the action to add to the observation.
         self._last_action = action
@@ -161,7 +164,9 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             ('last_action', self._last_action.copy()),
             # ('target_error', target_error),
             ('target_angle', self._target_object_pos[None].copy()),
-            ('object_to_target_angle_dist', object_to_target_angle_dist),
+            ('target_angle_cos', np.cos(self._target_object_pos)[None]),
+            ('target_angle_sin', np.sin(self._target_object_pos)[None]),
+            ('object_to_target_angle_distance', object_to_target_angle_dist),
         ))
 
         # Add hardware-specific state if present.
@@ -176,12 +181,12 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             obs_dict: Dict[str, np.ndarray],
     ) -> Dict[str, np.ndarray]:
         """Returns the reward for the given action and observation."""
-        object_to_target_angle_dist = obs_dict['object_to_target_angle_dist']
+        object_to_target_angle_dist = obs_dict['object_to_target_angle_distance']
         claw_vel = obs_dict['claw_qvel']
 
         reward_dict = collections.OrderedDict((
             # Penalty for distance away from goal.
-            ('object_to_target_angle_dist_cost', - np.log(object_to_target_angle_dist + 1e-10)),
+            ('object_to_target_angle_distance_reward', - np.log(object_to_target_angle_dist + 1e-10)),
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
              -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)
@@ -216,7 +221,7 @@ class BaseDClawTurn(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         score_dict = collections.OrderedDict((
             ('points', 1.0 - np.minimum(
-                obs_dict['object_to_target_angle_dist'], np.pi) / np.pi),
+                obs_dict['object_to_target_angle_distance'], np.pi) / np.pi),
             ('success', reward_dict['bonus_big'] > 0.0),
             ('safety_pos_violation', near_pos_limit),
             ('safety_vel_violation', above_vel_limit),
@@ -253,151 +258,187 @@ class DClawTurnFixed(BaseDClawTurn):
 
     def __init__(self,
                  *args,
-                 init_object_pos_range=(-np.pi, np.pi),
+                 init_pos_range=(-np.pi, np.pi),
                  target_pos_range=(-np.pi, np.pi),
+                 cycle_goals=False,
                  **kwargs):
-        self._init_object_pos_range = init_object_pos_range
+        self._init_pos_range = init_pos_range
         self._target_pos_range = target_pos_range
+        self._cycle_goals = cycle_goals
+        self._let_alg_set_goals = False
+        self._goal_index = 0
+
         super().__init__(*args, **kwargs)
 
+    @property
+    def num_goals(self):
+        if isinstance(self._target_pos_range, (list,)):
+            return len(self._target_pos_range)
+        else:
+            raise Exception("infinite goals")
+
+    def set_goal(self, goal_index):
+        """Allow outside algorithms to alter goals."""
+        self._goal_index = goal_index
+        self._cycle_goals = True
+        self._let_alg_set_goals = True
+
+    def _sample_goal(self, obs_dict):
+        if isinstance(self._target_pos_range, (list,)):
+            if self._cycle_goals:
+                if not self._let_alg_set_goals:
+                    self._goal_index = (self._goal_index + 1) % self.num_goals
+                target_pos = self._target_pos_range[self._goal_index]
+            else:
+                rand_index = np.random.randint(len(self._target_pos_range))
+                target_pos = np.array(self._target_pos_range[rand_index])
+        elif isinstance(self._target_pos_range, (tuple,)):
+            target_pos = np.random.uniform(
+                low=self._target_pos_range[0],
+                high=self._target_pos_range[1]
+            )
+        return target_pos
+
     def _reset(self):
-        self._initial_object_pos = np.random.uniform(
-                low=self._init_object_pos_range[0],
-                high=self._init_object_pos_range[1])
-        self._set_target_object_pos(np.random.uniform(
-            low=self._target_pos_range[0],
-            high=self._target_pos_range[1]))
-
-        super()._reset()
-
-
-@configurable(pickleable=True)
-class DClawTurnRandom(BaseDClawTurn):
-    """Turns the object with a random initial and random target position."""
-
-    def _reset(self):
-        # Initial position is +/- 60 degrees.
-        self._initial_object_pos = self.np_random.uniform(
-            low=-np.pi / 3, high=np.pi / 3)
-        # Target position is 180 +/- 60 degrees.
+        if isinstance(self._init_pos_range, (list,)):
+            rand_index = np.random.randint(len(self._init_pos_range))
+            self._initial_object_pos = np.array(self._init_pos_range[rand_index])
+        elif isinstance(self._init_pos_range, (tuple,)):
+            self._initial_object_pos = np.random.uniform(
+                low=self._init_pos_range[0],
+                high=self._init_pos_range[1]
+            )
         self._set_target_object_pos(
-            np.pi + self.np_random.uniform(low=-np.pi / 3, high=np.pi / 3))
+            self._sample_goal(self.get_obs_dict()))
         super()._reset()
 
 
-@configurable(pickleable=True)
-class DClawTurnRandomResetSingleGoal(BaseDClawTurn):
-    """Turns the object with a random initial and random target position."""
-    def __init__(self,
-                 *args,
-                 initial_object_pos_range=(-np.pi, np.pi),
-                 camera_config=None,
-                 **kwargs):
-        self._initial_object_pos_range = initial_object_pos_range
-        self._camera_config = camera_config
-        if self._camera_config is not None:
-            self.image_service = get_image_service(**camera_config)
-        return super(DClawTurnRandomResetSingleGoal, self).__init__(
-            *args, **kwargs)
+# @configurable(pickleable=True)
+# class DClawTurnRandom(BaseDClawTurn):
+#     """Turns the object with a random initial and random target position."""
 
-    def _reset(self):
-        # Initial position is +/- 180 degrees.
-        low, high = self._initial_object_pos_range
-        self._initial_object_pos = self.np_random.uniform(low=low, high=high)
-        # Target position is at 0 degrees.
-        self._set_target_object_pos(0)
-        super()._reset()
-
-    def render(self, *args, **kwargs):
-        if self._camera_config is not None:
-            return self.image_service.get_image(*args, **kwargs)
-
-        raise ValueError(args, kwargs)
-        return super(DClawTurnRandomResetSingleGoal, self).render(
-            *args, **kwargs)
+#     def _reset(self):
+#         # Initial position is +/- 60 degrees.
+#         self._initial_object_pos = self.np_random.uniform(
+#             low=-np.pi / 3, high=np.pi / 3)
+#         # Target position is 180 +/- 60 degrees.
+#         self._set_target_object_pos(
+#             np.pi + self.np_random.uniform(low=-np.pi / 3, high=np.pi / 3))
+#         super()._reset()
 
 
-@configurable(pickleable=True)
-class DClawTurnRandomDynamics(DClawTurnRandom):
-    """Turns the object with a random initial and random target position.
+# @configurable(pickleable=True)
+# class DClawTurnRandomResetSingleGoal(BaseDClawTurn):
+#     """Turns the object with a random initial and random target position."""
+#     def __init__(self,
+#                  *args,
+#                  initial_object_pos_range=(-np.pi, np.pi),
+#                  camera_config=None,
+#                  **kwargs):
+#         self._initial_object_pos_range = initial_object_pos_range
+#         self._camera_config = camera_config
+#         if self._camera_config is not None:
+#             self.image_service = get_image_service(**camera_config)
+#         return super(DClawTurnRandomResetSingleGoal, self).__init__(
+#             *args, **kwargs)
 
-    The dynamics of the simulation are randomized each episode.
-    """
+#     def _reset(self):
+#         # Initial position is +/- 180 degrees.
+#         low, high = self._initial_object_pos_range
+#         self._initial_object_pos = self.np_random.uniform(low=low, high=high)
+#         # Target position is at 0 degrees.
+#         self._set_target_object_pos(0)
+#         super()._reset()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._randomizer = SimRandomizer(self.sim_scene, self.np_random)
-        self._dof_indices = (
-            self.robot.get_config('dclaw').qvel_indices.tolist() +
-            self.robot.get_config('object').qvel_indices.tolist())
+#     def render(self, *args, **kwargs):
+#         if self._camera_config is not None:
+#             return self.image_service.get_image(*args, **kwargs)
 
-    def _reset(self):
-        # Randomize joint dynamics.
-        self._randomizer.randomize_dofs(
-            self._dof_indices,
-            damping_range=(0.005, 0.1),
-            friction_loss_range=(0.001, 0.005),
-        )
-        self._randomizer.randomize_actuators(
-            all_same=True,
-            kp_range=(1, 3),
-        )
-        # Randomize friction on all geoms in the scene.
-        self._randomizer.randomize_geoms(
-            all_same=True,
-            friction_slide_range=(0.8, 1.2),
-            friction_spin_range=(0.003, 0.007),
-            friction_roll_range=(0.00005, 0.00015),
-        )
-        self._randomizer.randomize_bodies(
-            ['mount'],
-            position_perturb_range=(-0.01, 0.01),
-        )
-        self._randomizer.randomize_geoms(
-            ['mount'],
-            color_range=(0.2, 0.9),
-        )
-        self._randomizer.randomize_geoms(
-            parent_body_names=['valve'],
-            color_range=(0.2, 0.9),
-            size_perturb_range=(-0.003, 0.003),
-        )
-        super()._reset()
+#         raise ValueError(args, kwargs)
+#         return super(DClawTurnRandomResetSingleGoal, self).render(
+#             *args, **kwargs)
 
 
-@configurable(pickleable=True)
-class DClawTurnImage(DClawTurnFixed):
-    """
-    Observation including the image.
-    """
+# @configurable(pickleable=True)
+# class DClawTurnRandomDynamics(DClawTurnRandom):
+#     """Turns the object with a random initial and random target position.
 
-    def __init__(self,
-                 image_shape: np.ndarray,
-                 goal_completion_threshold: bool = 0.15,
-                 *args, **kwargs):
-        self._image_shape = image_shape
-        self._goal_completion_threshold = goal_completion_threshold
-        super().__init__(*args, **kwargs)
+#     The dynamics of the simulation are randomized each episode.
+#     """
 
-    def get_obs_dict(self) -> Dict[str, np.ndarray]:
-        width, height = self._image_shape[:2]
-        obs_dict = super(DClawTurnImage, self).get_obs_dict()
-        image = self.render(mode='rgb_array',
-                            width=width,
-                            height=height,
-                            camera_id=-1).reshape(-1)
-        obs_dict['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
-        angle_dist = obs_dict['object_to_target_angle_dist']
-        obs_dict['is_goal'] = angle_dist < self._goal_completion_threshold
-        return obs_dict
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self._randomizer = SimRandomizer(self.sim_scene, self.np_random)
+#         self._dof_indices = (
+#             self.robot.get_config('dclaw').qvel_indices.tolist() +
+#             self.robot.get_config('object').qvel_indices.tolist())
+
+#     def _reset(self):
+#         # Randomize joint dynamics.
+#         self._randomizer.randomize_dofs(
+#             self._dof_indices,
+#             damping_range=(0.005, 0.1),
+#             friction_loss_range=(0.001, 0.005),
+#         )
+#         self._randomizer.randomize_actuators(
+#             all_same=True,
+#             kp_range=(1, 3),
+#         )
+#         # Randomize friction on all geoms in the scene.
+#         self._randomizer.randomize_geoms(
+#             all_same=True,
+#             friction_slide_range=(0.8, 1.2),
+#             friction_spin_range=(0.003, 0.007),
+#             friction_roll_range=(0.00005, 0.00015),
+#         )
+#         self._randomizer.randomize_bodies(
+#             ['mount'],
+#             position_perturb_range=(-0.01, 0.01),
+#         )
+#         self._randomizer.randomize_geoms(
+#             ['mount'],
+#             color_range=(0.2, 0.9),
+#         )
+#         self._randomizer.randomize_geoms(
+#             parent_body_names=['valve'],
+#             color_range=(0.2, 0.9),
+#             size_perturb_range=(-0.003, 0.003),
+#         )
+#         super()._reset()
 
 
+# @configurable(pickleable=True)
+# class DClawTurnImage(DClawTurnFixed):
+#     """
+#     Observation including the image.
+#     """
+
+#     def __init__(self,
+#                  image_shape: np.ndarray,
+#                  goal_completion_threshold: bool = 0.15,
+#                  *args, **kwargs):
+#         self._image_shape = image_shape
+#         self._goal_completion_threshold = goal_completion_threshold
+#         super().__init__(*args, **kwargs)
+
+#     def get_obs_dict(self) -> Dict[str, np.ndarray]:
+#         width, height = self._image_shape[:2]
+#         obs_dict = super(DClawTurnImage, self).get_obs_dict()
+#         image = self.render(mode='rgb_array',
+#                             width=width,
+#                             height=height,
+#                             camera_id=-1).reshape(-1)
+#         obs_dict['image'] = ((2.0 / 255.0) * image - 1.0) # Normalize between [-1, 1]
+#         angle_dist = obs_dict['object_to_target_angle_dist']
+#         obs_dict['is_goal'] = angle_dist < self._goal_completion_threshold
+#         return obs_dict
 
 @configurable(pickleable=True)
 class DClawTurnResetFree(DClawTurnFixed):
-    def __init__(self, reset_fingers=True, **kwargs):
+    def __init__(self, reset_fingers=True, hardware=False, **kwargs):
         super().__init__(**kwargs)
         self._reset_fingers = reset_fingers
+        self._hardware = hardware
     # def _reset(self):
     #     self._initial_object_pos = np.random.uniform(
     #             low=self._init_angle_range[0], high=self._init_angle_range[1])
@@ -408,68 +449,74 @@ class DClawTurnResetFree(DClawTurnFixed):
     #     super()._reset()
 
     def reset(self):
-        obs_dict = self.get_obs_dict()
-        dclaw_config = self.robot.get_config('dclaw')
-        dclaw_control_mode = dclaw_config.control_mode
-        dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
-        if self._reset_fingers:
-            reset_action = self.robot.normalize_action(
-                {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
+        if True and self._reset_fingers:
+            self.robot.set_motors_engaged('dclaw', True)
+            self.robot.set_state({'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE)})
+            self.robot.set_motors_engaged('object', False)
+            self.robot.reset_time()
+        else:
+            dclaw_config = self.robot.get_config('dclaw')
+            dclaw_control_mode = dclaw_config.control_mode
+            dclaw_config.set_control_mode(ControlMode.JOINT_POSITION)
+            if self._reset_fingers:
+                reset_action = self.robot.normalize_action(
+                    {'dclaw': DEFAULT_CLAW_RESET_POSE.copy()})['dclaw']
 
             for _ in range(15):
                 self._step(reset_action)
-        dclaw_config.set_control_mode(dclaw_control_mode)
-        self._set_target_object_pos(self._sample_goal(obs_dict))
+            dclaw_config.set_control_mode(dclaw_control_mode)
+
+        self._set_target_object_pos(self._sample_goal(self.get_obs_dict()))
         return self._get_obs(self.get_obs_dict())
 
-    def _sample_goal(self, obs_dict):
-        return np.pi
+    # def _sample_goal(self, obs_dict):
+    #     return np.pi
 
 
-@configurable(pickleable=True)
-class DClawTurnResetFreeSwapGoal(DClawTurnResetFree):
-    def __init__(self,
-                 **kwargs):
-        super().__init__(
-            **kwargs)
-        self._goal_index = 0
-        # self._goals = [(-0.06, -0.08, 0, 0, 0, 0), (-0.06, -0.08, 0, 0, 0, 0)]
-        self._goals = [np.pi/2, -np.pi/2]
-        self.n_goals = len(self._goals)
+# @configurable(pickleable=True)
+# class DClawTurnResetFreeSwapGoal(DClawTurnResetFree):
+#     def __init__(self,
+#                  **kwargs):
+#         super().__init__(
+#             **kwargs)
+#         self._goal_index = 0
+#         # self._goals = [(-0.06, -0.08, 0, 0, 0, 0), (-0.06, -0.08, 0, 0, 0, 0)]
+#         self._goals = [np.pi/2, -np.pi/2]
+#         self.n_goals = len(self._goals)
 
-    def _sample_goal(self, obs_dict):
-        self._goal_index = (self._goal_index + 1) % self.n_goals
-        return self._goals[self._goal_index]
-
-
-@configurable(pickleable=True)
-class DClawTurnResetFreeRandomGoal(DClawTurnResetFree):
-
-    def _current_goal(self):
-        return self._goal
-
-    def _sample_goal(self, obs_dict=None):
-        return np.random.uniform(-np.pi, np.pi)
+#     def _sample_goal(self, obs_dict):
+#         self._goal_index = (self._goal_index + 1) % self.n_goals
+#         return self._goals[self._goal_index]
 
 
-@configurable(pickleable=True)
-class DClawTurnImageResetFree(DClawTurnImage):
-    """
-    Resets do not move the screw back to its original position.
-    """
+# @configurable(pickleable=True)
+# class DClawTurnResetFreeRandomGoal(DClawTurnResetFree):
 
-    def _reset(self):
-        # Only reset the target position. Keep the object where it is.
-        self._set_target_object_pos(np.random.uniform(
-            low=self._target_pos_range[0],
-            high=self._target_pos_range[1]))
+#     def _current_goal(self):
+#         return self._goal
 
-    def reset(self):
-        obs_dict = self.get_obs_dict()
-        for _ in range(15):
-            self._step(DEFAULT_CLAW_RESET_POSE)
-        self._reset()
-        return self._get_obs(obs_dict)
+#     def _sample_goal(self, obs_dict=None):
+#         return np.random.uniform(-np.pi, np.pi)
+
+
+# @configurable(pickleable=True)
+# class DClawTurnImageResetFree(DClawTurnImage):
+#     """
+#     Resets do not move the screw back to its original position.
+#     """
+
+#     def _reset(self):
+#         # Only reset the target position. Keep the object where it is.
+#         self._set_target_object_pos(np.random.uniform(
+#             low=self._target_pos_range[0],
+#             high=self._target_pos_range[1]))
+
+#     def reset(self):
+#         obs_dict = self.get_obs_dict()
+#         for _ in range(15):
+#             self._step(DEFAULT_CLAW_RESET_POSE)
+#         self._reset()
+#         return self._get_obs(obs_dict)
 
 class BaseMultiGoalEnv(metaclass=abc.ABCMeta):
     # TODO: Put common abstractions in this class
@@ -659,4 +706,3 @@ class DClawTurnMultiGoal(DClawTurnFixed):
 class DClawTurnMultiGoalResetFree(DClawTurnMultiGoal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, reset_free=True, **kwargs)
-
