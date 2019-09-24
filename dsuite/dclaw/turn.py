@@ -449,7 +449,7 @@ class DClawTurnResetFree(DClawTurnFixed):
     #     super()._reset()
 
     def reset(self):
-        if True and self._reset_fingers:
+        if self._hardware and self._reset_fingers:
             self.robot.set_motors_engaged('dclaw', True)
             self.robot.set_state({'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE)})
             self.robot.set_motors_engaged('object', False)
