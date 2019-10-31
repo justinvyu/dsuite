@@ -67,7 +67,16 @@ DEFAULT_HARDWARE_OBSERVATION_KEYS = (
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_tiny_box.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_less_tiny_box.xml'
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_fixed_tiny_box.xml'
-DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_free.xml'
+# DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_valve3_free.xml'
+DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw_valve3_in_larger_box.xml'
+
+ARENA_PATHS = {
+    'box_tiny': 'dsuite/dclaw/assets/dclaw_valve3_in_tiny_box.xml',
+    'box_less_tiny': 'dsuite/dclaw/assets/dclaw_valve3_in_less_tiny_box.xml',
+    'box_regular': 'dsuite/dclaw/assets/dclaw3xh_valve3_free.xml',      # 15
+    'box_large': 'dsuite/dclaw/assets/dclaw_valve3_in_larger_box.xml',  # 17.5
+    'bowl': 'dsuite/dclaw/assets/dclaw3xh_valve4_bowl.xml',
+}
 
 class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     """Shared logic for DClaw turn tasks."""
@@ -80,6 +89,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
                  frame_skip: int = 40,
                  free_claw: bool = False,
                  position_reward_weight: int = 1,
+                 arena_type: str = 'box_regular',
                  use_bowl_arena: bool = False,
                  **kwargs):
         """Initializes the environment.
@@ -94,8 +104,11 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         self._position_reward_weight = position_reward_weight
         self._camera_config = camera_config
         self._use_bowl_arena = use_bowl_arena
-        if self._use_bowl_arena:
-            asset_path = 'dsuite/dclaw/assets/dclaw3xh_valve4_bowl.xml'
+        # if self._use_bowl_arena:
+        #     asset_path = 'dsuite/dclaw/assets/dclaw3xh_valve4_bowl.xml'
+
+        assert arena_type in ARENA_PATHS, arena_type
+        asset_path = ARENA_PATHS[arena_type]
         super().__init__(
             sim_model=get_asset_path(asset_path),
             robot_config=self.get_config_for_device(
