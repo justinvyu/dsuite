@@ -429,7 +429,8 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
     def __init__(self,
                  target_qpos_range=((0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0)),
                  init_qpos_range=((-0.05, -0.05, 0, 0, 0, -np.pi), (0.05, 0.05, 0, 0, 0, np.pi)),
-                 reset_policy_checkpoint_path='', #'/
+                 reset_policy_checkpoint_path='',
+                 cycle_inits=False,
                  cycle_goals=False,
                  *args,
                  **kwargs):
@@ -438,7 +439,9 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
         super().__init__(*args, **kwargs)
         self._policy = None
         self._cycle_goals = cycle_goals
+        self._cycle_inits = cycle_inits
         self._goal_index = 0
+        self._init_index = 0
         if reset_policy_checkpoint_path:
             self._load_policy(reset_policy_checkpoint_path)
 
@@ -500,8 +503,12 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
 
     def _reset(self):
         if isinstance(self._init_qpos_range, (list,)):
-            rand_index = np.random.randint(len(self._init_qpos_range))
-            self._initial_object_qpos = np.array(self._init_qpos_range[rand_index])
+            if self._cycle_inits:
+                init_index = self._init_index
+                self._init_index = (self._init_index + 1) % len(self._init_qpos_range)
+            else:
+                init_index = np.random.randint(len(self._init_qpos_range))
+            self._initial_object_qpos = np.array(self._init_qpos_range[init_index])
         elif isinstance(self._init_qpos_range, (tuple,)):
             self._initial_object_qpos = np.random.uniform(
                 low=self._init_qpos_range[0], high=self._init_qpos_range[1]

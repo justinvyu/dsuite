@@ -261,12 +261,15 @@ class DClawTurnFixed(BaseDClawTurn):
                  init_pos_range=(-np.pi, np.pi),
                  target_pos_range=(-np.pi, np.pi),
                  cycle_goals=False,
+                 cycle_inits=False,
                  **kwargs):
         self._init_pos_range = init_pos_range
         self._target_pos_range = target_pos_range
         self._cycle_goals = cycle_goals
+        self._cycle_inits = cycle_inits
         self._let_alg_set_goals = False
         self._goal_index = 0
+        self._init_index = 0
 
         super().__init__(*args, **kwargs)
 
@@ -301,8 +304,12 @@ class DClawTurnFixed(BaseDClawTurn):
 
     def _reset(self):
         if isinstance(self._init_pos_range, (list,)):
-            rand_index = np.random.randint(len(self._init_pos_range))
-            self._initial_object_pos = np.array(self._init_pos_range[rand_index])
+            if self._cycle_inits:
+                init_index = self._init_index
+                self._init_index = (self._init_index + 1) % len(self._init_pos_range)
+            else:
+                init_index = np.random.randint(len(self._init_pos_range))
+            self._initial_object_pos = np.array(self._init_pos_range[init_index])
         elif isinstance(self._init_pos_range, (tuple,)):
             self._initial_object_pos = np.random.uniform(
                 low=self._init_pos_range[0],

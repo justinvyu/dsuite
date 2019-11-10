@@ -313,14 +313,18 @@ class DClawSlideBeadsFixed(BaseDClawSlideFreeObject):
                  # target_qpos_range=[
                  #     [-0.0875, 0, 0.0875]*3
                  # ],
-                 reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
+                 reset_policy_checkpoint_path='',
+                 cycle_inits=False,
                  cycle_goals=False,
                  *args, **kwargs):
         self._init_qpos_range = init_qpos_range
         self._target_qpos_range = target_qpos_range
         super().__init__(*args, **kwargs)
         self._cycle_goals = cycle_goals
+        self._cycle_inits = cycle_inits
         self._goal_index = 0
+        self._init_index = 0
+
         self._let_alg_set_goals = False
         # self._reset_horizon = 0
         # self._policy = None
@@ -398,8 +402,12 @@ class DClawSlideBeadsFixed(BaseDClawSlideFreeObject):
 
     def _reset(self):
         if isinstance(self._init_qpos_range, (list,)):
-            rand_index = np.random.randint(len(self._init_qpos_range))
-            self._initial_objects_qpos = np.array(self._init_qpos_range[rand_index])
+            if self._cycle_inits:
+                init_index = self._init_index
+                self._init_index = (self._init_index + 1) % len(self._init_qpos_range)
+            else:
+                init_index = np.random.randint(len(self._init_qpos_range))
+            self._initial_objects_qpos = np.array(self._init_qpos_range[init_index])
         elif isinstance(self._init_qpos_range, (tuple,)):
             initial_qpos = np.random.uniform(
                 low=self._init_qpos_range[0], high=self._init_qpos_range[1]
