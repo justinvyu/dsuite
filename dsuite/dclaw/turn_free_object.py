@@ -323,11 +323,11 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
                  device_path: str = None,
                  observation_keys: Sequence[str] = DEFAULT_HARDWARE_OBSERVATION_KEYS,
                  frame_skip: int = 40,
-                 num_goals: int = 1,
-                 goals: np.ndarray = ((0, 0, 0, 0, 0, np.pi)),
+                 num_goals: int = 2,
+                 # goals: np.ndarray = ((0, 0, 0, 0, 0, np.pi)),
                  **kwargs):
-        if num_goals > 1:
-            observation_keys = observation_keys + ('goal_index', )
+        # if num_goals > 1:
+        #     observation_keys = observation_keys + ('goal_index', )
 
         super().__init__(
            sim_model=get_asset_path('dsuite-scenes/dclaw/dclaw3xh.xml'),
@@ -341,10 +341,10 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
             self._image_service = get_image_service(**camera_config)
         self._last_action = np.zeros(self.action_space.shape[0])
         self._num_goals = num_goals
-        self._goal_index = 0
+        # self._goal_index = 0
         # Goals need to be specified with 9-dim vector (same shape as qpos)
-        self._goals = goals
-        assert num_goals == len(goals)
+        # self._goals = goals
+        # assert num_goals == len(goals)
 
     def get_obs_dict(self) -> Dict[str, np.ndarray]:
         state = self.robot.get_state('dclaw')
@@ -352,15 +352,6 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
             ('claw_qpos', state.qpos),
             ('claw_qvel', state.qvel),
             ('last_action', self._last_action),
-            ('goal_index', np.array([self._goal_index])),
-            ('target_xy_position', np.array(
-                np.multiply(self._goals[self._goal_index][:2], 100))),
-            ('target_z_orientation_cos',
-                np.array([np.cos(self._goals[self._goal_index][-1]) * 10])
-            ),
-            ('target_z_orientation_sin',
-                np.array([np.sin(self._goals[self._goal_index][-1]) * 10])
-            ),
         ))
 
     def get_reward_dict(
@@ -395,9 +386,10 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
                                 qvel=np.zeros(self.action_space.shape[0]))
         })
         self.robot.set_state({
-            'dclaw': RobotState(qpos=INTERMEDIATE_CLAW_RESET_POSE_2,
+            'dclaw': RobotState(qpos=INTERMEDIATE_CLAW_RESET_POSE_0,
                                 qvel=np.zeros(self.action_space.shape[0]))
         })
+        DEFAULT_CLAW_RESET_POSE[[1, 4, 7]] = -np.pi/2
         self.robot.set_state({
             'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE,
                                 qvel=np.zeros(self.action_space.shape[0]))
@@ -405,7 +397,7 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
 
         self._last_action = np.zeros(self.action_space.shape[0])
         # Set the new goal every episode
-        self._goal_index = self._sample_goal()
+        # self._goal_index = self._sample_goal()
 
     def _sample_goal(self):
         if self._num_goals >= 2:
@@ -418,9 +410,21 @@ class DClawTurnFreeValve3Hardware(BaseDClawEnv):
 
     def render(self, *args, **kwargs):
         if self._camera_config is not None:
-            return self._image_service.get_image(*args, **kwargs)
+            image = self._image_service.get_image(*args, **kwargs)
+            return image
 
         return super().render(*args, **kwargs)
+
+    @property
+    def num_goals(self):
+        return self._num_goals
+
+    def set_goal(self, goal_index):
+        """Allow outside algorithms to alter goals."""
+        self._goal_index = goal_index
+        self._cycle_goals = True
+        self._let_alg_set_goals = True
+
 
 @configurable(pickleable=True)
 class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
@@ -428,7 +432,7 @@ class DClawTurnFreeValve3Fixed(BaseDClawTurnFreeObject):
 
     def __init__(self,
                  target_qpos_range=((0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0)),
-                 init_qpos_range=((-0.05, -0.05, 0, 0, 0, -np.pi), (0.05, 0.05, 0, 0, 0, np.pi)),
+                 init_qpos_range=((0, 0, 0, 0, 0, -np.pi/2), (0, 0, 0, 0, 0, -np.pi/2)),
                  reset_policy_checkpoint_path='',
                  cycle_inits=False,
                  cycle_goals=False,

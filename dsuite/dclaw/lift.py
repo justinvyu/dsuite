@@ -43,7 +43,7 @@ from dsuite.dclaw.turn_free_object import (
 
 INTERMEDIATE_CLAW_RESET_POSE_0 = np.array([np.pi / 3, -np.pi / 3, np.pi / 2] * 3)
 INTERMEDIATE_CLAW_RESET_POSE_1 = np.array([np.pi / 3, np.pi / 5, np.pi / 2] * 3)
-INTERMEDIATE_CLAW_RESET_POSE_2 = np.array([np.pi / 4, -np.pi/ 6, np.pi / 3] * 3)
+INTERMEDIATE_CLAW_RESET_POSE_2 = np.array([np.pi / 4, -np.pi / 6, np.pi / 3] * 3)
 
 # The observation keys that are concatenated as the environment observation.
 DEFAULT_OBSERVATION_KEYS = (

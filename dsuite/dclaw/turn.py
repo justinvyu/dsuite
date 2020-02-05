@@ -288,6 +288,7 @@ class DClawTurnFixed(BaseDClawTurn):
 
     def _sample_goal(self, obs_dict):
         if isinstance(self._target_pos_range, (list,)):
+
             if self._cycle_goals:
                 if not self._let_alg_set_goals:
                     self._goal_index = (self._goal_index + 1) % self.num_goals
@@ -442,7 +443,7 @@ class DClawTurnFixed(BaseDClawTurn):
 
 @configurable(pickleable=True)
 class DClawTurnResetFree(DClawTurnFixed):
-    def __init__(self, reset_fingers=True, hardware=False, **kwargs):
+    def __init__(self, reset_fingers=True, hardware=True, **kwargs):
         super().__init__(**kwargs)
         self._reset_fingers = reset_fingers
         self._hardware = hardware
@@ -456,11 +457,17 @@ class DClawTurnResetFree(DClawTurnFixed):
     #     super()._reset()
 
     def reset(self):
-        if self._hardware and self._reset_fingers:
-            self.robot.set_motors_engaged('dclaw', True)
-            self.robot.set_state({'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE)})
-            self.robot.set_motors_engaged('object', False)
+        if self._hardware:
+            if self._reset_fingers:
+                self.robot.set_motors_engaged('dclaw', True)
+                self.robot.set_state({'dclaw': RobotState(qpos=DEFAULT_CLAW_RESET_POSE)})
+                self.robot.set_motors_engaged('object', False)
+            else:
+                print("not resetting fingers")
+                self.robot.set_motors_engaged('object', False)
             self.robot.reset_time()
+
+
         else:
             dclaw_config = self.robot.get_config('dclaw')
             dclaw_control_mode = dclaw_config.control_mode

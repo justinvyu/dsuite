@@ -244,7 +244,7 @@ class DClawHardwareEnv(BaseDClawEnv):
         })
 
     def _reset(self):
-        self._reset_routine() 
+        self._reset_routine()
         self._last_action = np.zeros(self.action_space.shape[0])
         # Set the new goal every episode
         self._goal_index = self._sample_goal()

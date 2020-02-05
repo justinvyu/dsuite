@@ -36,16 +36,68 @@ DCLAW_SIM_CONFIG = {
             # ] * 3,
             'qpos_indices': range(9),
             'qpos_range': [
-                # (-PI / 6, PI / 6),  # 45 degrees for top servos.
-                (-PI / 2, PI / 2),  # 45 degrees for top servos.
+                # (-PI / 4, PI / 4),  # 45 degrees for top servos.
+                (-PI / 3, PI / 3),    # 60 degrees for top servos.
+                # (-PI / 2, PI / 2),  # 90 degrees for top servos.
                 (-PI / 3, PI / 3),  # 60 degrees for middle servos.
-                (-PI / 2, PI / 2),  # 90 degrees for bottom servos.
+                (-PI / 2, PI / 2),  # 90 degrees for bottom servos. 
             ] * 3,
             'qvel_range': [(-1.5, 1.5)] * 9,
             'sim_observation_noise': 0.00,
         },
     }
 }
+
+Z_DCLAW_SIM_CONFIG = {
+    'class_path': 'dsuite.components.robot:RobotComponent',
+    'groups': {
+        'dclaw': {
+            'control_mode': ControlMode.JOINT_POSITION,
+            # 'actuator_delta_range': [
+            #     (-np.pi/8, np.pi/8),
+            #     (-np.pi/6, np.pi/6),
+            #     (-np.pi/4, np.pi/4),
+            # ] * 3,
+            'qpos_indices': range(10),
+            'qpos_range': [(-1, 1)] +
+            [
+                # (-PI / 6, PI / 6),  # 45 degrees for top servos.
+                (-PI / 2, PI / 2),  # 90 degrees for top servos.
+                # (-PI / 3, PI / 3),  # 60 degrees for top servos.
+                (-PI / 3, PI / 3),  # 60 degrees for middle servos.
+                (-PI / 2, PI / 2),  # 90 degrees for bottom servos.
+            ] * 3,
+            'qvel_range': [(-1, 1)] + [(-1.5, 1.5)] * 9,
+            'sim_observation_noise': 0.00,
+        },
+    }
+}
+
+# Base config of 1D arm
+Z_ARM_SIM_CONFIG = {
+    'class_path': 'dsuite.components.robot:RobotComponent',
+    'groups': {
+        'arm': {
+            'control_mode': ControlMode.JOINT_VELOCITY,
+            # 'actuator_delta_range': [
+            #     (-np.pi/8, np.pi/8),
+            #     (-np.pi/6, np.pi/6),
+            #     (-np.pi/4, np.pi/4),
+            # ] * 3,
+            'qpos_indices': range(10),
+            'qpos_range': [(-0.025, 0.075)] +
+            [
+                # (-PI / 6, PI / 6),  # 45 degrees for top servos.
+                (-PI / 2, PI / 2),  # 45 degrees for top servos.
+                (-PI / 3, PI / 3),  # 60 degrees for middle servos.
+                (-PI / 2, PI / 2),  # 90 degrees for bottom servos.
+            ] * 3,
+            'qvel_range': [(-1, 1)] + [(-1.5, 1.5)] * 9,
+            'sim_observation_noise': 0.00,
+        },
+    }
+}
+
 
 # Base partial configuration for the object in simulation.
 _OBJECT_SIM_CONFIG = {
@@ -129,6 +181,8 @@ DCLAW_FREE_OBJECT_SIM_CONFIG = merge_configs(
 DCLAW_FREE_OBJECT_QUAT_SIM_CONFIG = merge_configs(
     DCLAW_SIM_CONFIG, _FREE_OBJECT_QUAT_SIM_CONFIG)
 
+Z_DCLAW_FREE_OBJECT_QUAT_SIM_CONFIG = merge_configs(
+    Z_DCLAW_SIM_CONFIG, _FREE_OBJECT_QUAT_SIM_CONFIG)
 
 def get_dclaw_beads_config(num_beads):
     beads_config = _FREE_OBJECT_SIM_CONFIG

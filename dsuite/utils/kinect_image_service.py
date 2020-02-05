@@ -8,7 +8,6 @@ import warnings
 from sklearn.exceptions import DataConversionWarning
 warnings.filterwarnings(action='ignore', category=DataConversionWarning)
 
-
 class KinectImageService(object):
     def __init__(self, image_shape=(32, 32, 3), topic="/kinect2/qhd/image_color"):
         self.image_shape = image_shape
@@ -38,7 +37,9 @@ class KinectImageService(object):
         # image = image[50:950, 500:1400]
 
         image = np.flip(image.reshape((540, 960, 3)), axis=2)
-        image = image[25:475, 250:700]
+        image = image[:, 225:225+540]
+
+        # image = image[280:280+260, 400:400+260]
 
         # image = np.flip(image.reshape((424, 512, 3)), axis=2)
         # image = image[:, 44:-44]
@@ -53,6 +54,7 @@ class KinectImageService(object):
         image = skimage.transform.downscale_local_mean(
             image, (width, height, 1))
         image = skimage.util.img_as_ubyte(image)
+
         return image
 
     def store_image(self, data):
@@ -76,7 +78,8 @@ class KinectImageService(object):
     def get_image(self, *args, width=32, height=32, **kwargs):
         if self.image.shape[:2] != (width, height):
             old_width, old_height = self.image.shape[:2]
-            assert old_width >= width and old_height >= height
+            assert old_width >= width and old_height >= height, (
+                f'{(old_width, old_height)} needs to be >= {(width, height)}')
             old_image = self.image.copy()
             # skimage requires the image be converted to float first
             float_img = skimage.util.img_as_float(old_image)
