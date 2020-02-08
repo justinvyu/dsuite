@@ -109,8 +109,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         assert arena_type in ARENA_PATHS, arena_type
         asset_path = ARENA_PATHS[arena_type]
-        if device_path is not None:
-            self._is_hardware = True
+        self._is_hardware = (device_path is not None)
 
         super().__init__(
             sim_model=get_asset_path(asset_path),
