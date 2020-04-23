@@ -29,6 +29,7 @@ from transforms3d.euler import euler2quat
 from dsuite.dclaw.base_env import (
     BaseDClawObjectEnv,
     BaseDClawEnv,
+    DClawHardwareEnv,
     DEFAULT_CLAW_RESET_POSE)
 from dsuite.utils.configurable import configurable
 from dsuite.utils.resources import get_asset_path
@@ -67,6 +68,11 @@ DEFAULT_OBSERVATION_KEYS = (
 # DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml'
 DCLAW3_ASSET_PATH = 'dsuite/dclaw/assets/dclaw3xh_dodecahedron_bowl.xml'
 
+ARENA_PATHS = {
+    'default': 'dsuite/dclaw/assets/dclaw3xh_dodecahedron_free.xml',
+    'octagon': 'dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml',
+    'bowl': 'dsuite/dclaw/assets/dclaw3xh_dodecahedron_bowl.xml'
+}
 
 class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
     """Shared logic for DClaw turn tasks."""
@@ -79,6 +85,8 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             frame_skip: int = 40,
             free_claw: bool = False,
             position_reward_weight: int = 1,
+            arena_type: str = "default",
+            initial_claw_qpos: np.ndarray = DEFAULT_CLAW_RESET_POSE,
             **kwargs
     ):
         """Initializes the environment.
@@ -96,6 +104,7 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
             [0, 0, 0.041, 1.017, 0, 0]
         )  # get from dodecahedron.xml, object['pos', 'euler']
 
+        asset_path = ARENA_PATHS.get(arena_type, asset_path)
         super().__init__(
             sim_model=get_asset_path(asset_path),
             robot_config=self.get_config_for_device(
@@ -112,9 +121,9 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
 
         # The following are modified (possibly every reset) by subclasses.
         self._set_target_object_qpos((0, 0, 0, 0, 0, 0))
-        self._initial_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
+        self._initial_claw_qpos = initial_claw_qpos # DEFAULT_CLAW_RESET_POSE.copy()
         self._initial_object_qpos = (0, 0, 0, 0, 0, 0, 0)
-        self._initial_object_qvel = (0, 0, 0, 0, 0, 0, 0) #(0, 0, 0, 0, 0, 0)
+        self._initial_object_qvel = (0, 0, 0, 0, 0, 0, 0)  #(0, 0, 0, 0, 0, 0)
 
     def _reset(self):
         """Resets the environment."""
@@ -221,6 +230,13 @@ class BaseDClawLiftFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
              -1 * np.linalg.norm(obs_dict['claw_qpos'] - self._desired_claw_pos)),
             # Penality for high velocities.
             ('joint_vel_cost', -1 * np.linalg.norm(claw_vel[claw_vel >= 0.5])),
+
+            ('sparse_position_reward',
+                -(object_to_target_z_position_distance >= 0.03
+                or object_to_target_xy_position_distance >= 0.03).astype(np.float)),
+            ('sparse_orientation_reward',
+                -(object_to_target_sphere_distance >= 0.15).astype(np.float)),
+
             # Reward for close proximity with goal.
             ('bonus_small', 10 * (object_to_target_sphere_distance < 0.5)),
             ('bonus_big', 50 * (object_to_target_sphere_distance < 0.20)),
@@ -340,7 +356,7 @@ class DClawLiftDDFixed(BaseDClawLiftFreeObject):
                      (0, 0, 0.05, 1.017, 0, 2*np.pi/5), # black side up
                  ],
                  asset_path='dsuite/dclaw/assets/dclaw3xh_dodecahedron.xml',
-                 reset_policy_checkpoint_path='', #'/mnt/sda/ray_results/gym/DClaw/LiftDDFixed-v0/2019-08-01T18-06-55-just_lift_single_goal/id=3ac8c6e0-seed=5285_2019-08-01_18-06-565pn01_gq/checkpoint_1500/',
+                 reset_policy_checkpoint_path='',
                  use_bowl_arena=True,
                  *args, **kwargs):
         self._init_qpos_range = init_qpos_range
@@ -480,7 +496,7 @@ class DClawLiftDDResetFree(DClawLiftDDFixed):
                  ],
                  init_qpos_range = [(-0.08, -0.08, 0.041, 1.017, 0, 0)],
                  reset_frequency: int = 0,
-                 reset_policy_checkpoint_path='', # '/home/abhigupta/ray_results/gym/DClaw/LiftDDResetFree-v0/2019-08-12T22-28-02-random_translate/id=1efced72-seed=3335_2019-08-12_22-28-03bqyu82da/checkpoint_1500/',
+                 reset_policy_checkpoint_path='',
                  **kwargs):
         self._last_claw_qpos = DEFAULT_CLAW_RESET_POSE.copy()
         self._last_object_position = np.array([0, 0, 0])
