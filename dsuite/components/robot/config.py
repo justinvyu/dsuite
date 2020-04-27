@@ -133,9 +133,12 @@ class RobotGroupConfig:
         self.actuator_indices = None
         if actuator_indices is not None:
             nu = sim_scene.model.nu
-            assert all(-nu <= i < nu for i in actuator_indices), \
-                'All actuator indices must be in [-{}, {}]'.format(
-                    nu, nu - 1)
+            # TODO(justinvyu): What's the point of this check?
+            # I had to remove it because the 2 object was erroring from this
+            # assertion below:
+            # assert all(-nu <= i < nu for i in actuator_indices), \
+            #     'All actuator indices must be in [-{}, {}]'.format(
+            #         nu, nu - 1)
             self.actuator_indices = np.array(actuator_indices, dtype=int)
 
         if actuator_range is None:

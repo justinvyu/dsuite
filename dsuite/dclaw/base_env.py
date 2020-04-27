@@ -25,6 +25,7 @@ from dsuite.components.robot import DynamixelRobotComponent, RobotState
 from dsuite.dclaw.config import (
     DCLAW_SIM_CONFIG, DCLAW_HARDWARE_CONFIG, DCLAW_OBJECT_SIM_CONFIG,
     DCLAW_FREE_OBJECT_SIM_CONFIG,
+    DCLAW_FREE_MULTI_OBJECT_SIM_CONFIG,
     DCLAW_FREE_OBJECT_QUAT_SIM_CONFIG,
     # FREE_DCLAW_FREE_OBJECT_SIM_CONFIG,
     DCLAW_OBJECT_HARDWARE_CONFIG,
@@ -155,6 +156,103 @@ class BaseDClawObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
             self.robot.set_state({
                 'dclaw': RobotState(qpos=claw_pos, qvel=claw_vel),
                 'object': RobotState(qpos=object_pos, qvel=object_vel),
+            })
+        else:
+            # Multi-stage reset procedure for hardware.
+            # Initially attempt to reset a subset of the motors.
+            self.robot.set_motors_engaged('disable_in_reset', False)
+            self.robot.set_state({'dclaw': RobotState(qpos=claw_pos)},
+                                 block=False)
+
+            self.robot.set_motors_engaged('object', True)
+            self.robot.set_state({
+                'object': RobotState(qpos=object_pos),
+                'guide': RobotState(qpos=guide_pos)
+            })
+
+            self.robot.set_motors_engaged('dclaw', True)
+            self.robot.set_state({'dclaw': RobotState(qpos=claw_pos)})
+
+            # Start the episode with the object disengaged.
+            self.robot.set_motors_engaged('object', False)
+            self.robot.reset_time()
+
+
+class BaseDClawMultiObjectEnv(BaseDClawEnv, metaclass=abc.ABCMeta):
+    """Base environment for all DClaw robot tasks with objects."""
+
+    @classmethod
+    def get_config_for_device(
+            cls,
+            device_path: Optional[str] = None,
+            free_object: bool = False,
+            free_claw: bool = False,
+            quat: bool = True,
+    ) -> Dict[str, Any]:
+        """Returns the configuration for the given device path."""
+        config = DCLAW_FREE_MULTI_OBJECT_SIM_CONFIG
+        return config
+
+    def __init__(self, **kwargs):
+        """Initializes the environment."""
+        super().__init__(**kwargs)
+
+        # Make a copy of the model to store initial values.
+        self._nominal_model = self.sim_scene.copy_model()
+
+        # Get handles to commonly referenced elements.
+        self._mount_bid = self.model.body_name2id('mount')
+        self._mount_gid = self.model.geom_name2id('mount')
+        # self._object_bid = self.model.body_name2id('object')
+
+    def _reset_dclaw_and_object(
+            self,
+            claw_pos: Optional[Sequence[float]] = None,
+            claw_vel: Optional[Sequence[float]] = None,
+            object1_pos: Optional[Sequence[float]] = None,
+            object1_vel: Optional[Sequence[float]] = None,
+            object2_pos: Optional[Sequence[float]] = None,
+            object2_vel: Optional[Sequence[float]] = None,
+            guide_pos: Optional[Sequence[float]] = None,
+    ):
+        """Reset procedure for DClaw robots that manipulate objects.
+
+        Args:
+            claw_pos: The joint positions for the claw (radians).
+            claw_vel: The joint velocities for the claw (radians/second). This
+                is ignored on hardware.
+            object_pos: The joint position for the object (radians).
+            object_vel: The joint velocity for the object (radians/second). This
+                is ignored on hardware.
+            guide_pos: The joint position for the guide motor (radians). The
+                guide motor is optional for marking the desired position.
+        """
+        # Set defaults if parameters are not given.
+        claw_init_state, object1_init_state, object2_init_state = self.robot.get_initial_state(
+            ['dclaw', 'object1', 'object2'])
+        claw_pos = (
+            claw_init_state.qpos if claw_pos is None else np.asarray(claw_pos))
+        claw_vel = (
+            claw_init_state.qvel if claw_vel is None else np.asarray(claw_vel))
+
+        object1_pos = (
+            object1_init_state.qpos
+            if object1_pos is None else np.atleast_1d(object1_pos))
+        object1_vel = (
+            object1_init_state.qvel
+            if object1_vel is None else np.atleast_1d(object1_vel))
+        object2_pos = (
+            object2_init_state.qpos
+            if object2_pos is None else np.atleast_1d(object2_pos))
+        object2_vel = (
+            object2_init_state.qvel
+            if object2_vel is None else np.atleast_1d(object2_vel))
+
+        if not isinstance(self.robot, DynamixelRobotComponent):
+            self.robot.set_state({
+                'dclaw': RobotState(qpos=claw_pos, qvel=claw_vel),
+                'object1': RobotState(qpos=object1_pos, qvel=object1_vel),
+                'object2': RobotState(qpos=object2_pos, qvel=object2_vel),
             })
         else:
             # Multi-stage reset procedure for hardware.

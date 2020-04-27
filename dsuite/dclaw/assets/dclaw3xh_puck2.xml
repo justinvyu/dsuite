@@ -1,0 +1,268 @@
+<mujoco model='dclaw3xh_puck2'>
+    <include file='../../../dsuite-scenes/scenes/basic_scene.xml' />
+    <include file='../../../dsuite-scenes/dclaw/assets/dependencies3xh.xml' />
+    <include file='../../../dsuite-scenes/dclaw_stations/assets/dependencies.xml' />
+    <compiler meshdir='../../../dsuite-scenes/dclaw' texturedir="../../../dsuite-scenes/dclaw"/>
+
+    <size njmax="2000" nconmax="2000"/>
+
+    <asset>
+      <texture file='../scenes/textures/light-wood.png' type="2d" name="tex-light-wood"/>
+      <material name="light-wood" reflectance="0.5" texrepeat="15 15" texture="tex-light-wood" texuniform="true"/>
+      <material name="screw-material" shininess='0.6' specular='0.35'/>
+    </asset>
+    <worldbody>
+
+      <camera name='object_target' pos='0.25 0 0.3' euler='0 0.7 1.57' />
+		  <body name='mount' pos='0.01 0 .255' euler='0 0 0'>
+        <geom name='mount' type="cylinder" size='0.03 0.005' rgba='.7 .7 .7 1'/>
+	      <include file='../../../dsuite-scenes/dclaw/assets/chain3xh.xml'/>
+	      <include file='../../../dsuite-scenes/dclaw/assets/chain3xh_overlay.xml'/>
+	    </body>
+
+      <body name="puck1" pos="0 0 0.0101">
+      <body name='object1' pos='0 0 0.02'>
+        <body euler='0 0 0'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 1.57'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 3.14'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 4.71'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 0.785'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 2.36'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 3.93'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 5.50'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 0.392'>
+          <body euler='0 0 0'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 1.57'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 3.14'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 4.71'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 0.785'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 2.36'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 3.93'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 5.50'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='100'/>
+          </body>
+        </body>
+        <joint name="obj1_OBJSx"  pos="0 0 0" type="slide" axis="1 0 0" limited='false'/>
+        <joint name="obj1_OBJSy"  pos="0 0 0" type="slide" axis="0 1 0" limited='false' />
+        <joint name="obj1_OBJSz"  pos="0 0 0" type="slide" axis="0 0 1" limited='false' />
+        <joint name="obj1_OBJRx"  pos="0 0 0" type="hinge" axis="1 0 0" limited='false' />
+        <joint name="obj1_OBJRy"  pos="0 0 0" type="hinge" axis="0 1 0" limited='false' />
+        <joint name="obj1_OBJRz"  pos="0 0 0" type="hinge" axis="0 0 1" limited='false' />
+      </body>
+      </body>
+
+      <body name="puck2" pos="0 0 0.0101">
+      <body name='object2' pos='0 0 0.02'>
+        <body euler='0 0 0'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 1.57'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 3.14'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 4.71'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 0.785'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 2.36'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 3.93'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 5.50'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+        </body>
+        <body euler='0 0 0.392'>
+          <body euler='0 0 0'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 1.57'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 3.14'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 4.71'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 0.785'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 2.36'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 3.93'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+          </body>
+          <body euler='0 0 5.50'>
+            <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='100'/>
+          </body>
+        </body>
+        <joint name="obj2_OBJSx"  pos="0 0 0" type="slide" axis="1 0 0" limited='false'/>
+        <joint name="obj2_OBJSy"  pos="0 0 0" type="slide" axis="0 1 0" limited='false' />
+        <joint name="obj2_OBJSz"  pos="0 0 0" type="slide" axis="0 0 1" limited='false' />
+        <joint name="obj2_OBJRx"  pos="0 0 0" type="hinge" axis="1 0 0" limited='false' />
+        <joint name="obj2_OBJRy"  pos="0 0 0" type="hinge" axis="0 1 0" limited='false' />
+        <joint name="obj2_OBJRz"  pos="0 0 0" type="hinge" axis="0 0 1" limited='false' />
+      </body>
+      </body>
+
+    <body name='visual1' pos='0 0 0'>
+    <body name='target1' pos='0 0 0'>
+      <body euler='0 0 0'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 1.57'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 3.14'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 4.71'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 0.785'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 2.36'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 3.93'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 5.50'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 0.392'>
+        <body euler='0 0 0'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 1.57'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 3.14'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 4.71'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 0.785'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 2.36'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 3.93'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 5.50'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+      </body>
+    </body>
+    </body>
+
+    <body name='visual2' pos='0 0 0'>
+    <body name='target2' pos='0 0 0'>
+      <body euler='0 0 0'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 1.57'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 3.14'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 4.71'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 0.785'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 2.36'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 3.93'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 5.50'>
+        <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+      </body>
+      <body euler='0 0 0.392'>
+        <body euler='0 0 0'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 1.57'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 3.14'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 4.71'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 0.785'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 2.36'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 3.93'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+        <body euler='0 0 5.50'>
+          <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
+        </body>
+      </body>
+    </body>
+    </body>
+
+      <!-- <body name="visual" pos="0 0 0.0101">
+        <include file='../../../dsuite-scenes/dclaw_stations/assets/puck_visual.xml'/>
+      </body> -->
+
+      <!-- <body name="arena" pos="0 0 0">
+        <geom type="box" size="0.155 0.005 0.04" pos="0 0.15 0" material="light-wood"/>
+        <geom type="box" size="0.005 0.155 0.04" pos="0.15 0 0" material="light-wood"/>
+        <geom type="box" size="0.005 0.155 0.04" pos="-0.15 0 0" material="light-wood"/>
+        <geom type="box" size="0.155 0.005 0.04" pos="0 -0.15 0" material="light-wood"/>
+      </body> -->
+
+    </worldbody>
+
+</mujoco>

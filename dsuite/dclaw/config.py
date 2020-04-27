@@ -111,6 +111,34 @@ _OBJECT_SIM_CONFIG = {
     }
 }
 
+_FREE_MULTI_OBJECT_SIM_CONFIG = {
+    'groups': {
+        'object1': {
+            'qpos_indices': range(-12, -6),  # The object is the last qpos.
+            'qpos_range': [
+                (-1, 1),     # restrict x
+                (-1, 1),     # restrict y
+                (0, 0.25),          # unrestricted z
+                (-np.pi, np.pi), # unrestricted object orientation
+                (-np.pi, np.pi),
+                (-np.pi, np.pi)],
+            'sim_observation_noise': 0,
+        },
+        'object2': {
+            'qpos_indices': range(-6, 0),  # The object is the last qpos.
+            'qpos_range': [
+                (-1, 1),     # restrict x
+                (-1, 1),     # restrict y
+                (0, 0.25),          # unrestricted z
+                (-np.pi, np.pi), # unrestricted object orientation
+                (-np.pi, np.pi),
+                (-np.pi, np.pi)],
+            'sim_observation_noise': 0,
+        },
+        'guide': {},  # The guide group is a no-op in simulation.
+    }
+}
+
 # Base partial configuration for the object in simulation.
 _FREE_OBJECT_SIM_CONFIG = {
     'groups': {
@@ -177,6 +205,8 @@ DCLAW_OBJECT_SIM_CONFIG = merge_configs(DCLAW_SIM_CONFIG, _OBJECT_SIM_CONFIG)
 # Configuration for a DClaw with a free object in simulation.
 DCLAW_FREE_OBJECT_SIM_CONFIG = merge_configs(
     DCLAW_SIM_CONFIG, _FREE_OBJECT_SIM_CONFIG)
+DCLAW_FREE_MULTI_OBJECT_SIM_CONFIG = merge_configs(
+    DCLAW_SIM_CONFIG, _FREE_MULTI_OBJECT_SIM_CONFIG)
 
 DCLAW_FREE_OBJECT_QUAT_SIM_CONFIG = merge_configs(
     DCLAW_SIM_CONFIG, _FREE_OBJECT_QUAT_SIM_CONFIG)

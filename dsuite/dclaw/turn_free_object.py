@@ -89,7 +89,7 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
                  frame_skip: int = 40,
                  free_claw: bool = False,
                  position_reward_weight: int = 1,
-                 arena_type: str = 'box_regular',
+                 arena_type: str = None,
                  use_bowl_arena: bool = False,
                  **kwargs):
         """Initializes the environment.
@@ -104,11 +104,8 @@ class BaseDClawTurnFreeObject(BaseDClawObjectEnv, metaclass=abc.ABCMeta):
         self._position_reward_weight = position_reward_weight
         self._camera_config = camera_config
         self._use_bowl_arena = use_bowl_arena
-        # if self._use_bowl_arena:
-        #     asset_path = 'dsuite/dclaw/assets/dclaw3xh_valve4_bowl.xml'
 
-        assert arena_type in ARENA_PATHS, arena_type
-        asset_path = ARENA_PATHS[arena_type]
+        asset_path = ARENA_PATHS.get(arena_type, asset_path)
         self._is_hardware = (device_path is not None)
 
         super().__init__(
