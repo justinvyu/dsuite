@@ -247,9 +247,9 @@ class BaseDClawTranslateMultiObject(BaseDClawMultiObjectEnv, metaclass=abc.ABCMe
              - np.log(1 * object1_to_target_circle_distance + 0.005)),
 
             ('object2_to_target_position_distance_log_reward',
-             - np.log(20 * (object1_to_target_position_distance + 0.01))),
+             - np.log(20 * (object2_to_target_position_distance + 0.01))),
             ('object2_to_target_orientation_distance_log_reward',
-             - np.log(1 * object1_to_target_circle_distance + 0.005)),
+             - np.log(1 * object2_to_target_circle_distance + 0.005)),
 
             # Penalty for difference with nomimal pose.
             ('pose_diff_cost',
@@ -304,12 +304,12 @@ class DClawTranslateMultiPuckFixed(BaseDClawTranslateMultiObject):
             self,
             *args,
             init_qpos_ranges: Sequence[np.ndarray]=(
-                ((0.1, 0.1, 0, 0, 0, 0), (0.1, 0.1, 0, 0, 0, 0)),
-                ((-0.1, -0.1, 0, 0, 0, 0), (-0.1, -0.1, 0, 0, 0, 0)),
+                ((0.05, 0.05, 0, 0, 0, 0), (0.05, 0.05, 0, 0, 0, 0)),
+                ((-0.05, -0.05, 0, 0, 0, 0), (-0.05, -0.05, 0, 0, 0, 0))
             ),
             target_qpos_ranges: Sequence[np.ndarray]=(
-                ((0.1, -0.1, 0, 0, 0, 0), (0.1, -0.1, 0, 0, 0, 0)),
-                ((-0.1, 0.1, 0, 0, 0, 0), (-0.1, 0.1, 0, 0, 0, 0))
+                ((0.05, -0.05, 0, 0, 0, 0), (0.05, -0.05, 0, 0, 0, 0)),
+                ((-0.05, 0.05, 0, 0, 0, 0), (-0.05, 0.05, 0, 0, 0, 0))
             ),
             **kwargs):
         super(DClawTranslateMultiPuckFixed, self).__init__(

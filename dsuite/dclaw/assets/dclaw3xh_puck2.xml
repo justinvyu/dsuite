@@ -23,7 +23,7 @@
       <body name="puck1" pos="0 0 0.0101">
       <body name='object1' pos='0 0 0.02'>
         <body euler='0 0 0'>
-          <geom class='station_phy_plastic' type="box" pos="0 0 0" size="0.025 0.025 0.015" rgba='0.8 0.1 0.1 1' group='1' density='200'/>
+          <geom class='station_phy_plastic' type="box" pos="0 0 0" size="0.025 0.025 0.015" rgba='0.8 0.1 0.1 1' group='1' density='2500'/>
           <!-- <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 1' group='1' density='200' />
         </body>
         <body euler='0 0 1.57'>
@@ -84,7 +84,7 @@
 
       <body name="puck2" pos="0 0 0.0101">
       <body name='object2' pos='0 0 0.02'>
-        <geom class='station_phy_plastic' type="box" pos="0 0 0" size="0.025 0.025 0.015" rgba='0.1 0.1 0.8 1' group='1' density='200'/>
+        <geom class='station_phy_plastic' type="box" pos="0 0 0" size="0.025 0.025 0.015" rgba='0.1 0.1 0.8 1' group='1' density='2500'/>
         <!-- <body euler='0 0 0'>
           <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 1' group='1' density='200'/>
         </body>
@@ -144,9 +144,9 @@
       </body>
       </body>
 
-    <body name='visual1' pos='0 0 0'>
+    <body name='visual1' pos='0 0 0.0101'>
     <body name='target1' pos='0 0 0'>
-      <geom class='station_phy_plastic' type="box" pos="0 0 0.02" size="0.025 0.025 0.015" rgba='0.8 0.1 0.1 0.1' group='1' density='200'/>
+      <geom class='station_phy_plastic' type="box" pos="0 0 0" size="0.025 0.025 0.015" rgba='0.8 0.1 0.1 0.1' contype='0' conaffinity='0' group='1' />
       <!-- <body euler='0 0 0'>
         <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.8 0.1 0.1 0.1' group='1' contype='0' conaffinity='0' density='100'/>
       </body>
@@ -200,9 +200,9 @@
     </body>
     </body>
 
-    <body name='visual2' pos='0 0 0'>
+    <body name='visual2' pos='0 0 0.0101'>
     <body name='target2' pos='0 0 0'>
-      <geom class='station_phy_plastic' type="box" pos="0 0 0.02" size="0.025 0.025 0.015" rgba='0.1 0.1 0.8 0.1' group='1' density='200'/>
+      <geom class='station_phy_plastic' type="box" pos="0 0 0" size="0.025 0.025 0.015" rgba='0.1 0.1 0.8 0.1' contype='0' conaffinity='0' group='1' />
       <!-- <body euler='0 0 0'>
         <geom class='station_phy_plastic' type="box" pos="0.055 0 0.02" size="0.0075 0.0125 0.015" rgba='0.1 0.1 0.8 0.1' group='1' contype='0' conaffinity='0' density='100'/>
       </body>
