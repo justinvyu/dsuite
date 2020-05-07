@@ -19,9 +19,19 @@ import os
 from typing import Any
 
 import mujoco_py
+from mujoco_py.builder import cymj, user_warning_raise_exception
 
 from dsuite.simulation.mjpy_renderer import MjPyRenderer
 from dsuite.simulation.sim_scene import SimScene
+
+
+def _mj_warning_fn(warn_data: bytes):
+    try:
+        user_warning_raise_exception(warn_data)
+    except mujoco_py.MujocoException as e:
+        logging.error('Mujoco Exception: %s', str(e))
+
+cymj.set_warning_callback(_mj_warning_fn)
 
 
 class MjPySimScene(SimScene):
