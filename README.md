@@ -44,22 +44,35 @@ env.step(env.action_space.sample())
 
 #### MuJoCo
 
-Download MuJoCo Pro 2.00 from the
-[MuJoCo website](https://www.roboti.us/index.html). You should extract this
-to `~/.mujoco/mujoco200`. Ensure your MuJoCo license key is placed at
-`~/.mujoco/mjkey.txt`.
+Download MuJoCo 2.1.0 from the
+[MuJoCo repo](https://github.com/deepmind/mujoco/releases). You should extract this
+to `~/.mujoco/mujoco210`. No license needed anymore!
 
 #### D'Suite
 
-D'Suite requires Python 3.5 or higher. You can install D'Suite by running:
+D'Suite requires Python 3.5 or higher. You can install D'Suite by running the following command in this directory:
 
 ```bash
-pip install dsuite
+pip install -e .
 ```
 
-We recommend doing this in a `virtualenv` or with the `--user` flag to avoid
-interfering with system packages.
+Then, clone ``dsuite-scenes`` into this directory, and checkout the `dev` branch on the repo using:
+
+```bash
+git clone -b dev dsuite-scenes
+```
+
+#### Visualizing Environments
+
+Find a full list of registered environments in `dsuite/dclaw/__init__.py`.
+
+Visualize and save the video of one of these environments, running a random policy using this script:
+
+```bash
+python -m dsuite.scripts.examine_random_policy -d DClawTurnFreeValve3 -e Fixed-v0 -f ./video.mp4
+```
 
 ## Disclaimer
 
 This is not an official Google product.
+

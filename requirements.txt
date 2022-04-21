@@ -1,5 +1,5 @@
-gym>=0.11.0,<0.14.0
-mujoco-py>2.0,<2.1
+gym<0.15,>=0.14
+mujoco-py<2.2,>=2.1.0
 numpy>=1.13.3
 transforms3d>=0.3.0<0.4
 dynamixel_sdk @ https://github.com/ROBOTIS-GIT/DynamixelSDK/archive/3.7.0.zip#subdirectory=python
